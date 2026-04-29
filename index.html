@@ -582,14 +582,28 @@ async function seedDefaultLambs(){
   await batch.commit();
 }
 async function getLogs(mentor=null){
-  let q=db.collection('logs').orderBy('ts','desc');
-  if(mentor)q=q.where('mentor','==',mentor);
-  const snap=await q.get();
-  return snap.docs.map(d=>({...d.data(),docId:d.id}));
+  try{
+    let q=db.collection('logs');
+    if(mentor)q=q.where('mentor','==',mentor);
+    const snap=await q.get();
+    const docs=snap.docs.map(d=>({...d.data(),docId:d.id}));
+    return docs.sort((a,b)=>(b.ts||0)-(a.ts||0));
+  }catch(e){
+    console.error('getLogs error:',e);
+    return [];
+  }
 }
 async function getLogsForLamb(lambId){
-  const snap=await db.collection('logs').where('lambId','==',lambId).orderBy('ts','desc').get();
-  return snap.docs.map(d=>({...d.data(),docId:d.id}));
+  try{
+    // ดึงข้อมูลโดยไม่ orderBy เพื่อหลีกเลี่ยงปัญหา index
+    const snap=await db.collection('logs').where('lambId','==',lambId).get();
+    const docs=snap.docs.map(d=>({...d.data(),docId:d.id}));
+    // sort ใน JS แทน
+    return docs.sort((a,b)=>(b.ts||0)-(a.ts||0));
+  }catch(e){
+    console.error('getLogsForLamb error:',e);
+    return [];
+  }
 }
 async function saveLog(data){
   await db.collection('logs').add(data);
@@ -598,8 +612,14 @@ async function deleteLogDoc(docId){
   await db.collection('logs').doc(docId).delete();
 }
 async function getProbNotes(lambId){
-  const snap=await db.collection('probNotes').where('lambId','==',lambId).orderBy('ts','desc').get();
-  return snap.docs.map(d=>({...d.data(),docId:d.id}));
+  try{
+    const snap=await db.collection('probNotes').where('lambId','==',lambId).get();
+    const docs=snap.docs.map(d=>({...d.data(),docId:d.id}));
+    return docs.sort((a,b)=>(b.ts||0)-(a.ts||0));
+  }catch(e){
+    console.error('getProbNotes error:',e);
+    return [];
+  }
 }
 async function saveProbNote(data){await db.collection('probNotes').add(data);}
 async function deleteProbNote(docId){await db.collection('probNotes').doc(docId).delete();}
