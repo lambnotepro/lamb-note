@@ -214,6 +214,7 @@ tbody td{padding:8px 10px;vertical-align:top}
     <button class="nav-btn active" id="nav-log" onclick="showPage('log-page',this)">✏️ บันทึก</button>
     <button class="nav-btn" id="nav-profile" onclick="showPage('profile-page',this)">👤 ประวัติลูกแกะ</button>
     <button class="nav-btn" id="nav-outreach" onclick="showPage('outreach-page',this)">🌱 คนใหม่</button>
+    <button class="nav-btn" id="pastor-nav-btn" onclick="showPage('pastor-page',this)" style="display:none">⛪ ภาพรวม</button>
     <button class="nav-btn" id="admin-nav-btn" onclick="showPage('admin-page',this)" style="display:none">🔑 Admin</button>
   </div>
   <div class="content">
@@ -410,6 +411,82 @@ tbody td{padding:8px 10px;vertical-align:top}
   </div>
 </div>
 
+<!-- PASTOR PAGE -->
+<div class="page" id="pastor-page">
+  <!-- Stats -->
+  <div class="card">
+    <div class="card-title">⛪ ภาพรวม — Pastor View</div>
+    <div class="stat-grid" id="pastor-stats"></div>
+  </div>
+  <!-- Chart -->
+  <div class="card">
+    <div class="card-title">📊 สถิติเวลา</div>
+    <div class="stabs">
+      <button class="stab active" onclick="showPastorChart('weekly',this)">รายสัปดาห์</button>
+      <button class="stab" onclick="showPastorChart('monthly',this)">รายเดือน</button>
+      <button class="stab" onclick="showPastorChart('yearly',this)">รายปี</button>
+    </div>
+    <div style="margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="stab active" id="pchart-mode-total" onclick="setPastorChartMode('total',this)">📊 รวมทั้งหมด</button>
+      <button class="stab" id="pchart-mode-mentor" onclick="setPastorChartMode('mentor',this)">👥 แยกรายพี่เลี้ยง</button>
+    </div>
+    <div id="pastor-chart"></div>
+  </div>
+  <!-- Mentor summary -->
+  <div class="card">
+    <div class="card-title">👥 สรุปรายพี่เลี้ยง</div>
+    <div class="tbl-wrap">
+      <table><thead><tr><th>พี่เลี้ยง</th><th>Care Group</th><th>ลูกแกะ</th><th>บันทึก</th><th>เวลารวม (ชม.)</th><th>สัปดาห์นี้</th></tr></thead>
+      <tbody id="pastor-mentor-tbody"></tbody></table>
+    </div>
+  </div>
+  <!-- Outreach summary -->
+  <div class="card">
+    <div class="card-title">🌱 สรุปคนใหม่ทุกพี่เลี้ยง</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
+      <select id="por-filter-period" onchange="renderPastorOutreach()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px">
+        <option value="all">ทั้งหมด</option>
+        <option value="week0">สัปดาห์นี้</option>
+        <option value="week1">สัปดาห์ที่แล้ว</option>
+        <option value="week2">2 สัปดาห์ก่อน</option>
+        <option value="week3">3 สัปดาห์ก่อน</option>
+        <option value="month0">เดือนนี้</option>
+        <option value="month1">เดือนที่แล้ว</option>
+        <option value="month2">2 เดือนก่อน</option>
+      </select>
+      <span id="por-period-label" style="font-size:12px;color:var(--text2)"></span>
+    </div>
+    <div class="tbl-wrap">
+      <table><thead><tr>
+        <th>พี่เลี้ยง</th><th>วันที่</th><th>ชื่อเล่น / ชื่อ</th><th>อาชีพ</th><th>รู้จักผ่าน</th><th>สถานะ</th><th>เวลา</th><th>โน้ต</th>
+      </tr></thead>
+      <tbody id="pastor-or-tbody"></tbody></table>
+    </div>
+    <div class="empty" id="pastor-or-empty" style="display:none">ยังไม่มีบันทึก</div>
+  </div>
+  <!-- จัดการลูกแกะ (pastor เพิ่ม/ลบได้) -->
+  <div class="card">
+    <div class="card-title">⚙️ จัดการลูกแกะ</div>
+    <div class="manage-section">
+      <h4>➕ เพิ่มลูกแกะใหม่</h4>
+      <div class="form-row">
+        <div class="form-group"><label>ชื่อลูกแกะ</label><input type="text" id="p-new-lamb-name" placeholder="ชื่อ"></div>
+        <div class="form-group"><label>พี่เลี้ยง</label>
+          <select id="p-new-lamb-mentor" onchange="pastorAutoFillGroup()"></select>
+        </div>
+        <div class="form-group"><label>Care Group (auto)</label>
+          <input type="text" id="p-new-lamb-group" readonly style="background:var(--surface2);color:var(--text2)">
+        </div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="pastorAddLamb()">+ เพิ่ม</button>
+    </div>
+    <div class="manage-section">
+      <h4>🗑️ ลูกแกะทั้งหมด (คลิกเพื่อลบ)</h4>
+      <div id="pastor-lamb-list" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ADMIN PAGE -->
 <div class="page" id="admin-page">
   <!-- Stats -->
@@ -477,14 +554,10 @@ tbody td{padding:8px 10px;vertical-align:top}
       <div class="form-row">
         <div class="form-group"><label>ชื่อลูกแกะ</label><input type="text" id="new-lamb-name" placeholder="ชื่อ"></div>
         <div class="form-group"><label>พี่เลี้ยง</label>
-          <select id="new-lamb-mentor"></select>
+          <select id="new-lamb-mentor" onchange="autoFillGroup()"></select>
         </div>
-        <div class="form-group"><label>Care Group</label>
-          <select id="new-lamb-group">
-            <option value="Advance Pro">Advance Pro</option>
-            <option value="Startup Pro">Startup Pro</option>
-            <option value="Protharam">Protharam</option>
-          </select>
+        <div class="form-group"><label>Care Group (auto)</label>
+          <input type="text" id="new-lamb-group" readonly style="background:var(--surface2);color:var(--text2)">
         </div>
       </div>
       <button class="btn btn-primary btn-sm" onclick="adminAddLamb()">+ เพิ่ม</button>
@@ -614,7 +687,7 @@ async function initFirebase(){
       // restore หน้าที่อยู่ก่อน refresh
       const savedPage=sessionStorage.getItem('ln_page')||'log-page';
       const savedLamb=sessionStorage.getItem('ln_lamb')||'';
-      const navMap={'log-page':'nav-log','profile-page':'nav-profile','outreach-page':'nav-outreach','admin-page':'admin-nav-btn'};
+      const navMap={'log-page':'nav-log','profile-page':'nav-profile','outreach-page':'nav-outreach','pastor-page':'pastor-nav-btn','admin-page':'admin-nav-btn'};
       const navBtn=document.getElementById(navMap[savedPage]||'nav-log');
       document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
       document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
@@ -625,6 +698,7 @@ async function initFirebase(){
         renderLambGrid();
       }
       if(savedPage==='outreach-page')renderOutreach();
+      if(savedPage==='pastor-page')renderPastor();
       if(savedPage==='admin-page')renderAdmin();
     } else {
       document.getElementById('loading-overlay').style.display='none';
@@ -792,6 +866,8 @@ function logout(){
   sessionStorage.removeItem('ln_mentor');
   sessionStorage.removeItem('ln_page');
   sessionStorage.removeItem('ln_lamb');
+  const pBtn=document.getElementById('pastor-nav-btn');
+  if(pBtn)pBtn.style.display='none';
   document.getElementById('app').style.display='none';
   document.getElementById('login-page').style.display='flex';
   document.getElementById('mentor-input').value='';
@@ -817,6 +893,7 @@ function showPage(id,btn){
     renderLambGrid();
   }
   if(id==='outreach-page')renderOutreach();
+  if(id==='pastor-page')renderPastor();
   if(id==='admin-page')renderAdmin();
 }
 function showStab(id,btn){
@@ -872,9 +949,18 @@ function fillAdminLessonSets(){
 function fillAdminMentorSelect(){
   const mentors=DEFAULT_MENTORS;
   document.getElementById('af-mentor').innerHTML=mentors.map(m=>`<option value="${m}">${m}</option>`).join('');
-  document.getElementById('new-lamb-mentor').innerHTML=mentors.map(m=>`<option value="${m}">${m}</option>`).join('');
+  const nlm=document.getElementById('new-lamb-mentor');
+  if(nlm){
+    nlm.innerHTML=mentors.map(m=>`<option value="${m}">${m}</option>`).join('');
+    autoFillGroup();
+  }
   const mf=document.getElementById('admin-filter-mentor');
   mf.innerHTML='<option value="">ทุกพี่เลี้ยง</option>'+mentors.map(m=>`<option>${m}</option>`).join('');
+}
+function autoFillGroup(){
+  const mentor=document.getElementById('new-lamb-mentor')?.value;
+  const grpInput=document.getElementById('new-lamb-group');
+  if(grpInput&&mentor)grpInput.value=MENTOR_GROUPS[mentor]||'';
 }
 function refreshAdminLambSelect(){
   const mentor=document.getElementById('af-mentor').value;
@@ -1231,7 +1317,7 @@ function renderAdminLambManage(){
 async function adminAddLamb(){
   const name=document.getElementById('new-lamb-name').value.trim();
   const mentor=document.getElementById('new-lamb-mentor').value;
-  const group=document.getElementById('new-lamb-group').value;
+  const group=MENTOR_GROUPS[mentor]||document.getElementById('new-lamb-group').value;
   if(!name||!mentor)return;
   const ids=LAMBS.map(l=>parseInt(l.id.replace('L',''))||0);
   const nextNum=Math.max(...ids,0)+1;
@@ -1399,6 +1485,126 @@ function setChartMode(mode,btn){
   document.querySelectorAll('#chart-mode-total,#chart-mode-mentor').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   getLogs().then(logs=>renderAdminChart(currentAdminChart,logs));
+}
+
+// ── PASTOR PAGE ──
+let pastorChartMode='total';
+let currentPastorChart='weekly';
+
+async function renderPastor(){
+  const allLogs=await getLogs();
+  const totalHrs=allLogs.reduce((a,l)=>a+(l.dur||0),0);
+  document.getElementById('pastor-stats').innerHTML=`
+    <div class="stat-card"><div class="stat-val">${DEFAULT_MENTORS.length}</div><div class="stat-label">พี่เลี้ยง</div></div>
+    <div class="stat-card"><div class="stat-val">${LAMBS.length}</div><div class="stat-label">ลูกแกะ</div></div>
+    <div class="stat-card"><div class="stat-val">${allLogs.length}</div><div class="stat-label">บันทึกทั้งหมด</div></div>
+    <div class="stat-card"><div class="stat-val">${totalHrs.toFixed(1)}</div><div class="stat-label">เวลารวม (ชม.)</div></div>
+  `;
+  renderPastorMentors(allLogs);
+  renderPastorChart(currentPastorChart,allLogs);
+  renderPastorOutreach();
+  renderPastorLambManage();
+  fillPastorMentorSelect();
+}
+function fillPastorMentorSelect(){
+  const sel=document.getElementById('p-new-lamb-mentor');
+  if(sel){
+    sel.innerHTML=DEFAULT_MENTORS.map(m=>`<option value="${m}">${m}</option>`).join('');
+    pastorAutoFillGroup();
+  }
+}
+function pastorAutoFillGroup(){
+  const mentor=document.getElementById('p-new-lamb-mentor')?.value;
+  const grp=document.getElementById('p-new-lamb-group');
+  if(grp&&mentor)grp.value=MENTOR_GROUPS[mentor]||'';
+}
+function renderPastorMentors(allLogs){
+  const now=new Date();
+  const weekStart=new Date(now);weekStart.setDate(now.getDate()-now.getDay());
+  document.getElementById('pastor-mentor-tbody').innerHTML=DEFAULT_MENTORS.map(m=>{
+    const mLogs=allLogs.filter(l=>l.mentor===m);
+    const hrs=mLogs.reduce((a,l)=>a+(l.dur||0),0);
+    const wkHrs=mLogs.filter(l=>{const d=new Date(l.date);return d>=weekStart;}).reduce((a,l)=>a+(l.dur||0),0);
+    const myLambs=LAMBS.filter(l=>l.mentor===m);
+    return`<tr><td style="font-weight:700;color:var(--warm)">${m}</td><td>${MENTOR_GROUPS[m]||''}</td><td>${myLambs.map(l=>l.name).join(', ')||'—'}</td><td>${mLogs.length}</td><td>${hrs.toFixed(1)}</td><td>${wkHrs.toFixed(1)}</td></tr>`;
+  }).join('');
+}
+function showPastorChart(type,btn){
+  currentPastorChart=type;
+  document.querySelectorAll('#pastor-page .stab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  getLogs().then(logs=>renderPastorChart(type,logs));
+}
+function setPastorChartMode(mode,btn){
+  pastorChartMode=mode;
+  document.querySelectorAll('#pchart-mode-total,#pchart-mode-mentor').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  getLogs().then(logs=>renderPastorChart(currentPastorChart,logs));
+}
+function renderPastorChart(type,allLogs){
+  // reuse admin chart logic
+  const savedMode=chartMode;
+  chartMode=pastorChartMode;
+  const el=document.getElementById('admin-chart');
+  const pel=document.getElementById('pastor-chart');
+  // temporarily redirect
+  if(pel){
+    pel.id='admin-chart';
+    renderAdminChart(type,allLogs);
+    pel.id='pastor-chart';
+  }
+  chartMode=savedMode;
+}
+async function renderPastorOutreach(){
+  try{
+    const period=document.getElementById('por-filter-period')?.value||'all';
+    const lbl=document.getElementById('por-period-label');
+    if(lbl)lbl.textContent=periodLabel(period);
+    const snap=await db.collection('outreach').get();
+    let docs=snap.docs.map(d=>({...d.data(),docId:d.id})).sort((a,b)=>(b.ts||0)-(a.ts||0));
+    docs=filterByPeriod(docs,period);
+    const tbody=document.getElementById('pastor-or-tbody');
+    if(!docs.length){tbody.innerHTML='';document.getElementById('pastor-or-empty').style.display='block';return;}
+    document.getElementById('pastor-or-empty').style.display='none';
+    const statusColor={'เปิดใจ':'badge-green','กลาง':'badge-amber','ยังไม่พร้อม':'badge-red','ผู้เชื่อแล้ว':'badge-blue'};
+    tbody.innerHTML=docs.map(d=>`<tr>
+      <td><strong>${d.mentor}</strong></td>
+      <td>${formatDate(d.date)}</td>
+      <td><strong>${d.nick||''}</strong>${d.fname?' / '+d.fname:''}</td>
+      <td style="font-size:12px">${d.job||'—'}</td>
+      <td style="font-size:12px">${d.contact||'—'}</td>
+      <td><span class="badge ${statusColor[d.status]||'badge-warm'}">${d.status}</span></td>
+      <td>${d.dur}</td>
+      <td style="font-size:12px;max-width:120px">${d.note||'—'}</td>
+    </tr>`).join('');
+  }catch(e){console.error('renderPastorOutreach:',e);}
+}
+function renderPastorLambManage(){
+  document.getElementById('pastor-lamb-list').innerHTML=LAMBS.map(l=>
+    `<button class="lamb-btn" style="font-size:12px;padding:5px 10px" onclick="pastorDeleteLamb('${l.id}','${l.name}')">${l.name} ✕</button>`
+  ).join('');
+}
+async function pastorAddLamb(){
+  const name=document.getElementById('p-new-lamb-name').value.trim();
+  const mentor=document.getElementById('p-new-lamb-mentor').value;
+  const group=MENTOR_GROUPS[mentor]||'';
+  if(!name||!mentor)return;
+  const ids=LAMBS.map(l=>parseInt(l.id.replace('L',''))||0);
+  const nextNum=Math.max(...ids,0)+1;
+  const newId='L'+String(nextNum).padStart(3,'0');
+  const newLamb={id:newId,name,mentor,group};
+  await db.collection('lambs').doc(newId).set(newLamb);
+  LAMBS.push(newLamb);LAMBS.sort((a,b)=>a.id.localeCompare(b.id));
+  document.getElementById('p-new-lamb-name').value='';
+  renderPastorLambManage();
+  showToast(`✓ เพิ่ม ${name} แล้ว`);
+}
+async function pastorDeleteLamb(id,name){
+  if(!confirm(`ลบลูกแกะ "${name}" ออกจากระบบ?`))return;
+  await db.collection('lambs').doc(id).delete();
+  LAMBS=LAMBS.filter(l=>l.id!==id);
+  renderPastorLambManage();
+  showToast(`✓ ลบ ${name} แล้ว`);
 }
 
 function formatDate(d){
