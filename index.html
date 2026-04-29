@@ -27,7 +27,7 @@ const MENTOR_PASSWORDS = {
   'ทีม':       '',
   'หมิว':      'Malimilamali',
   'สิงโต':     '',
-  'คช.':       '1150',
+  'คช.':       '',
   'แพรว':      '',
   'ทราย':      '',
   'แมนยู':     '',
@@ -432,9 +432,27 @@ tbody td{padding:8px 10px;vertical-align:top}
   <!-- Outreach summary for admin -->
   <div class="card" id="admin-outreach-card">
     <div class="card-title">🌱 สรุปคนใหม่ทุกพี่เลี้ยง</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
+      <select id="or-filter-mentor" onchange="renderAdminOutreach()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px">
+        <option value="">ทุกพี่เลี้ยง</option>
+      </select>
+      <select id="or-filter-period" onchange="renderAdminOutreach()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px">
+        <option value="all">ทั้งหมด</option>
+        <option value="week0">สัปดาห์นี้</option>
+        <option value="week1">สัปดาห์ที่แล้ว</option>
+        <option value="week2">2 สัปดาห์ก่อน</option>
+        <option value="week3">3 สัปดาห์ก่อน</option>
+        <option value="week4">4 สัปดาห์ก่อน</option>
+        <option value="month0">เดือนนี้</option>
+        <option value="month1">เดือนที่แล้ว</option>
+        <option value="month2">2 เดือนก่อน</option>
+        <option value="month3">3 เดือนก่อน</option>
+      </select>
+      <span id="or-period-label" style="font-size:12px;color:var(--text2)"></span>
+    </div>
     <div class="tbl-wrap">
       <table><thead><tr>
-        <th>พี่เลี้ยง</th><th>วันที่</th><th>ชื่อเล่น / ชื่อ</th><th>อาชีพ</th><th>รู้จักผ่าน</th><th>สถานะ</th><th>เวลา</th><th>โน้ต</th>
+        <th>พี่เลี้ยง</th><th>วันที่</th><th>ชื่อเล่น / ชื่อ</th><th>อาชีพ</th><th>รู้จักผ่าน</th><th>สถานะ</th><th>เวลา</th><th>โน้ต</th><th></th>
       </tr></thead>
       <tbody id="admin-or-tbody"></tbody></table>
     </div>
@@ -1279,10 +1297,68 @@ async function deleteOutreach(docId){
   await db.collection('outreach').doc(docId).delete();
   await renderOutreach();
 }
+function getWeekRange(weeksAgo){
+  const now=new Date();
+  const day=now.getDay();
+  const startOfThisWeek=new Date(now);
+  startOfThisWeek.setDate(now.getDate()-day);
+  startOfThisWeek.setHours(0,0,0,0);
+  const start=new Date(startOfThisWeek);
+  start.setDate(start.getDate()-(weeksAgo*7));
+  const end=new Date(start);
+  end.setDate(end.getDate()+6);
+  end.setHours(23,59,59,999);
+  return{start,end};
+}
+function getMonthRange(monthsAgo){
+  const now=new Date();
+  const start=new Date(now.getFullYear(),now.getMonth()-monthsAgo,1);
+  const end=new Date(now.getFullYear(),now.getMonth()-monthsAgo+1,0,23,59,59,999);
+  return{start,end};
+}
+function filterByPeriod(docs,period){
+  if(period==='all')return docs;
+  let range;
+  if(period.startsWith('week'))range=getWeekRange(parseInt(period.replace('week','')));
+  else range=getMonthRange(parseInt(period.replace('month','')));
+  return docs.filter(d=>{
+    if(!d.date)return false;
+    const dt=new Date(d.date+'T00:00:00');
+    return dt>=range.start&&dt<=range.end;
+  });
+}
+function periodLabel(period){
+  if(period==='all')return'';
+  if(period==='week0')return'สัปดาห์นี้';
+  if(period==='month0')return'เดือนนี้';
+  if(period.startsWith('week')){
+    const r=getWeekRange(parseInt(period.replace('week','')));
+    return`${formatDate(r.start.toISOString().split('T')[0])} — ${formatDate(r.end.toISOString().split('T')[0])}`;
+  }
+  if(period.startsWith('month')){
+    const r=getMonthRange(parseInt(period.replace('month','')));
+    return r.start.toLocaleDateString('th-TH',{month:'long',year:'2-digit'});
+  }
+  return'';
+}
 async function renderAdminOutreach(){
   try{
+    // fill mentor filter
+    const mf=document.getElementById('or-filter-mentor');
+    if(mf&&mf.options.length<=1){
+      DEFAULT_MENTORS.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;mf.appendChild(o);});
+    }
+    const mentorFilter=document.getElementById('or-filter-mentor')?.value||'';
+    const period=document.getElementById('or-filter-period')?.value||'all';
+    // update label
+    const lbl=document.getElementById('or-period-label');
+    if(lbl)lbl.textContent=periodLabel(period);
+
     const snap=await db.collection('outreach').get();
-    const docs=snap.docs.map(d=>({...d.data(),docId:d.id})).sort((a,b)=>(b.ts||0)-(a.ts||0));
+    let docs=snap.docs.map(d=>({...d.data(),docId:d.id})).sort((a,b)=>(b.ts||0)-(a.ts||0));
+    if(mentorFilter)docs=docs.filter(d=>d.mentor===mentorFilter);
+    docs=filterByPeriod(docs,period);
+
     const tbody=document.getElementById('admin-or-tbody');
     if(!docs.length){tbody.innerHTML='';document.getElementById('admin-or-empty').style.display='block';return;}
     document.getElementById('admin-or-empty').style.display='none';
@@ -1295,9 +1371,16 @@ async function renderAdminOutreach(){
       <td style="font-size:12px">${d.contact||'—'}</td>
       <td><span class="badge ${statusColor[d.status]||'badge-warm'}">${d.status}</span></td>
       <td>${d.dur}</td>
-      <td style="font-size:12px;max-width:140px">${d.note||'—'}</td>
+      <td style="font-size:12px;max-width:120px">${d.note||'—'}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="adminDeleteOutreach('${d.docId}')">ลบ</button></td>
     </tr>`).join('');
   }catch(e){console.error('renderAdminOutreach:',e);}
+}
+async function adminDeleteOutreach(docId){
+  if(!confirm('ลบบันทึกคนใหม่นี้?'))return;
+  await db.collection('outreach').doc(docId).delete();
+  showToast('✓ ลบแล้ว');
+  await renderAdminOutreach();
 }
 
 // ── CHART MODE ──
