@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -8,6 +9,7 @@
 <!-- ═══════════════════════════════════════════════════════════════
      🔥 FIREBASE CONFIG — ใส่ค่าของคุณตรงนี้หลังสร้าง project
      ═══════════════════════════════════════════════════════════════ -->
+
 <script>
 const FIREBASE_CONFIG = {
   apiKey:            "AIzaSyAx0BQ6D_k19LsojRgmoW19T51LfedFxRI",
@@ -42,7 +44,9 @@ const MENTOR_PASSWORDS = {
 </script>
 
 <!-- Firebase SDK -->
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <style>
@@ -166,10 +170,12 @@ tbody td{padding:8px 10px;vertical-align:top}
 .manage-section{background:var(--surface2);border-radius:var(--radius);padding:14px;margin-bottom:12px}
 .manage-section h4{font-size:13px;font-weight:700;color:var(--warm);margin-bottom:10px}
 </style>
+
 </head>
 <body>
 
 <!-- LOADING -->
+
 <div id="loading-overlay">
   <div style="font-size:36px">🐑</div>
   <div class="spin"></div>
@@ -177,6 +183,7 @@ tbody td{padding:8px 10px;vertical-align:top}
 </div>
 
 <!-- LOGIN -->
+
 <div id="login-page">
   <div class="login-card">
     <div class="login-logo">🐑</div>
@@ -193,6 +200,7 @@ tbody td{padding:8px 10px;vertical-align:top}
 </div>
 
 <!-- APP -->
+
 <div id="app">
   <div class="topbar">
     <div class="topbar-logo">🐑 Lamb Note</div>
@@ -206,242 +214,244 @@ tbody td{padding:8px 10px;vertical-align:top}
   </div>
   <div class="content">
 
-    <!-- LOG PAGE -->
-    <div class="page active" id="log-page">
-      <div class="card">
-        <div class="card-title">✏️ บันทึกการใช้เวลา</div>
-        <div class="form-row">
-          <div class="form-group" style="min-width:150px">
-            <label>ลูกแกะ (Lamb)</label>
-            <select id="f-lamb"></select>
-          </div>
-          <div class="form-group" style="max-width:170px">
-            <label>วันที่</label>
-            <input type="date" id="f-date">
-          </div>
-          <div class="form-group" style="max-width:210px">
-            <label>ประเภทกิจกรรม</label>
-            <select id="f-content" onchange="onContentChange()">
-              <option value="สอนบทเรียน">📖 สอนบทเรียน</option>
-              <option value="ติดตามชีวิต">💬 ติดตามชีวิต</option>
-              <option value="หนุนใจ">❤️ หนุนใจ / พัฒนาชีวิต</option>
-              <option value="แก้ไขปัญหา">🔧 แก้ไขปัญหาชีวิต</option>
-              <option value="กิจกรรม">🎯 กิจกรรม / รับใช้ร่วม</option>
-              <option value="อื่นๆ">📌 อื่นๆ</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-row" id="lesson-row">
-          <div class="form-group">
-            <label>ชุดบทเรียน</label>
-            <select id="f-lset" onchange="updateLessonItems()">
-              <option value="">-- เลือกชุด --</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>บท / หัวข้อ</label>
-            <select id="f-lsec"><option value="">-- เลือกบท --</option></select>
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>รายละเอียด / โน้ต</label>
-            <textarea id="f-note" rows="2" placeholder="บันทึกรายละเอียด..."></textarea>
-          </div>
-          <div class="form-group" style="max-width:110px">
-            <label>เวลา (ชม.)</label>
-            <input type="number" id="f-dur" value="1" min="0.5" step="0.5">
-          </div>
-        </div>
-        <button class="btn btn-primary" id="save-log-btn" onclick="addLog()">+ บันทึก</button>
+```
+<!-- LOG PAGE -->
+<div class="page active" id="log-page">
+  <div class="card">
+    <div class="card-title">✏️ บันทึกการใช้เวลา</div>
+    <div class="form-row">
+      <div class="form-group" style="min-width:150px">
+        <label>ลูกแกะ (Lamb)</label>
+        <select id="f-lamb"></select>
+      </div>
+      <div class="form-group" style="max-width:170px">
+        <label>วันที่</label>
+        <input type="date" id="f-date">
+      </div>
+      <div class="form-group" style="max-width:210px">
+        <label>ประเภทกิจกรรม</label>
+        <select id="f-content" onchange="onContentChange()">
+          <option value="สอนบทเรียน">📖 สอนบทเรียน</option>
+          <option value="ติดตามชีวิต">💬 ติดตามชีวิต</option>
+          <option value="หนุนใจ">❤️ หนุนใจ / พัฒนาชีวิต</option>
+          <option value="แก้ไขปัญหา">🔧 แก้ไขปัญหาชีวิต</option>
+          <option value="กิจกรรม">🎯 กิจกรรม / รับใช้ร่วม</option>
+          <option value="อื่นๆ">📌 อื่นๆ</option>
+        </select>
       </div>
     </div>
-
-    <!-- PROFILE PAGE -->
-    <div class="page" id="profile-page">
-      <div class="card">
-        <div class="card-title">👤 เลือกลูกแกะเพื่อดูประวัติ</div>
-        <div class="lamb-grid" id="lamb-grid"></div>
+    <div class="form-row" id="lesson-row">
+      <div class="form-group">
+        <label>ชุดบทเรียน</label>
+        <select id="f-lset" onchange="updateLessonItems()">
+          <option value="">-- เลือกชุด --</option>
+        </select>
       </div>
-      <div id="lamb-detail" style="display:none">
-        <div class="card">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-            <div style="font-size:32px">🐑</div>
-            <div>
-              <div style="font-size:19px;font-weight:700;color:var(--warm)" id="p-name"></div>
-              <div style="font-size:12px;color:var(--text2)" id="p-meta"></div>
-            </div>
-          </div>
-          <div class="stat-grid" id="p-stats"></div>
-        </div>
-        <div class="stabs">
-          <button class="stab active" onclick="showStab('s-lessons',this)">📖 บทเรียนที่ผ่านแล้ว</button>
-          <button class="stab" onclick="showStab('s-history',this)">📋 ประวัติการใช้เวลา</button>
-          <button class="stab" onclick="showStab('s-counsel',this)">💬 การปรึกษา / หนุนใจ</button>
-          <button class="stab" onclick="showStab('s-problem',this)">🔧 แก้ไขปัญหาชีวิต</button>
-          <button class="stab" onclick="showStab('s-notes',this)">📝 โน้ตลักษณะปัจจุบัน</button>
-        </div>
-        <div class="card" id="s-lessons">
-          <div class="card-title">📖 บทเรียนที่ผ่านแล้ว</div>
-          <div id="p-lessons-content"></div>
-        </div>
-        <div class="card" id="s-history" style="display:none">
-          <div class="card-title" style="justify-content:space-between">
-            <span>📋 ประวัติการใช้เวลาทั้งหมด</span>
-            <span id="p-hist-count" style="font-size:12px;color:var(--text2);font-weight:400"></span>
-          </div>
-          <div class="tbl-wrap">
-            <table><thead><tr><th>วันที่</th><th>ประเภท</th><th>บทเรียน</th><th>โน้ต</th><th>ชม.</th><th></th></tr></thead>
-            <tbody id="p-hist-tbody"></tbody></table>
-          </div>
-          <div class="empty" id="p-hist-empty" style="display:none">ยังไม่มีบันทึก</div>
-        </div>
-        <div class="card" id="s-counsel" style="display:none">
-          <div class="card-title">💬 ประวัติการปรึกษา / หนุนใจพัฒนาชีวิต</div>
-          <div class="tbl-wrap">
-            <table><thead><tr><th>วันที่</th><th>ประเภท</th><th>รายละเอียด</th><th>ชม.</th></tr></thead>
-            <tbody id="p-counsel-tbody"></tbody></table>
-          </div>
-          <div class="empty" id="p-counsel-empty" style="display:none">ยังไม่มีบันทึก</div>
-        </div>
-        <div class="card" id="s-problem" style="display:none">
-          <div class="card-title">🔧 ตารางแก้ไขปัญหาชีวิต</div>
-          <div class="tbl-wrap">
-            <table><thead><tr><th>วันที่</th><th>รายละเอียดปัญหา</th><th></th></tr></thead>
-            <tbody id="p-problem-tbody"></tbody></table>
-          </div>
-          <div class="empty" id="p-problem-empty" style="display:none">ยังไม่มีบันทึก</div>
-          <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
-            <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">➕ เพิ่มบันทึกปัญหา</div>
-            <div class="form-row">
-              <div class="form-group"><label>รายละเอียด</label><textarea id="prob-note" rows="2" placeholder="ปัญหาหรือสถานการณ์..."></textarea></div>
-              <div class="form-group" style="max-width:150px"><label>วันที่</label><input type="date" id="prob-date"></div>
-            </div>
-            <button class="btn btn-primary btn-sm" onclick="addProblemNote()">+ บันทึก</button>
-          </div>
-        </div>
-        <div class="card" id="s-notes" style="display:none">
-          <div class="card-title">📝 โน้ตลักษณะปัจจุบัน</div>
-          <textarea id="current-note" rows="5" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:14px" placeholder="บันทึกลักษณะนิสัย จุดแข็ง จุดที่ต้องพัฒนา..."></textarea>
-          <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="saveCurrentNote()">💾 บันทึก</button>
-        </div>
+      <div class="form-group">
+        <label>บท / หัวข้อ</label>
+        <select id="f-lsec"><option value="">-- เลือกบท --</option></select>
       </div>
     </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>รายละเอียด / โน้ต</label>
+        <textarea id="f-note" rows="2" placeholder="บันทึกรายละเอียด..."></textarea>
+      </div>
+      <div class="form-group" style="max-width:110px">
+        <label>เวลา (ชม.)</label>
+        <input type="number" id="f-dur" value="1" min="0.5" step="0.5">
+      </div>
+    </div>
+    <button class="btn btn-primary" id="save-log-btn" onclick="addLog()">+ บันทึก</button>
+  </div>
+</div>
 
-    <!-- ADMIN PAGE -->
-    <div class="page" id="admin-page">
-      <!-- Stats -->
-      <div class="card">
-        <div class="card-title">🔑 Admin — สรุปภาพรวม</div>
-        <div class="stat-grid" id="admin-stats"></div>
-      </div>
-      <!-- Chart -->
-      <div class="card">
-        <div class="card-title">📊 สถิติเวลา (ไม่ระบุชื่อพี่เลี้ยง)</div>
-        <div class="stabs">
-          <button class="stab active" onclick="showAdminChart('weekly',this)">รายสัปดาห์</button>
-          <button class="stab" onclick="showAdminChart('monthly',this)">รายเดือน</button>
-          <button class="stab" onclick="showAdminChart('yearly',this)">รายปี</button>
-        </div>
-        <div id="admin-chart"></div>
-      </div>
-      <!-- Mentor summary (anonymous for report) -->
-      <div class="card">
-        <div class="card-title">👥 สรุปรายพี่เลี้ยง</div>
-        <div class="tbl-wrap">
-          <table><thead><tr><th>พี่เลี้ยง</th><th>Care Group</th><th>ลูกแกะ</th><th>บันทึก</th><th>เวลารวม (ชม.)</th><th>สัปดาห์นี้</th></tr></thead>
-          <tbody id="admin-mentor-tbody"></tbody></table>
+<!-- PROFILE PAGE -->
+<div class="page" id="profile-page">
+  <div class="card">
+    <div class="card-title">👤 เลือกลูกแกะเพื่อดูประวัติ</div>
+    <div class="lamb-grid" id="lamb-grid"></div>
+  </div>
+  <div id="lamb-detail" style="display:none">
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <div style="font-size:32px">🐑</div>
+        <div>
+          <div style="font-size:19px;font-weight:700;color:var(--warm)" id="p-name"></div>
+          <div style="font-size:12px;color:var(--text2)" id="p-meta"></div>
         </div>
       </div>
-      <!-- Manage Lambs -->
-      <div class="card" id="admin-manage-card">
-        <div class="card-title">⚙️ จัดการลูกแกะ</div>
-        <div class="manage-section">
-          <h4>➕ เพิ่มลูกแกะใหม่</h4>
-          <div class="form-row">
-            <div class="form-group"><label>ชื่อลูกแกะ</label><input type="text" id="new-lamb-name" placeholder="ชื่อ"></div>
-            <div class="form-group"><label>พี่เลี้ยง</label>
-              <select id="new-lamb-mentor"></select>
-            </div>
-            <div class="form-group"><label>Care Group</label>
-              <select id="new-lamb-group">
-                <option value="Advance Pro">Advance Pro</option>
-                <option value="Startup Pro">Startup Pro</option>
-                <option value="Protharam">Protharam</option>
-              </select>
-            </div>
-          </div>
-          <button class="btn btn-primary btn-sm" onclick="adminAddLamb()">+ เพิ่ม</button>
-        </div>
-        <div class="manage-section">
-          <h4>🗑️ ลูกแกะทั้งหมด (คลิกเพื่อลบ)</h4>
-          <div id="admin-lamb-list" style="display:flex;flex-wrap:wrap;gap:8px"></div>
-        </div>
+      <div class="stat-grid" id="p-stats"></div>
+    </div>
+    <div class="stabs">
+      <button class="stab active" onclick="showStab('s-lessons',this)">📖 บทเรียนที่ผ่านแล้ว</button>
+      <button class="stab" onclick="showStab('s-history',this)">📋 ประวัติการใช้เวลา</button>
+      <button class="stab" onclick="showStab('s-counsel',this)">💬 การปรึกษา / หนุนใจ</button>
+      <button class="stab" onclick="showStab('s-problem',this)">🔧 แก้ไขปัญหาชีวิต</button>
+      <button class="stab" onclick="showStab('s-notes',this)">📝 โน้ตลักษณะปัจจุบัน</button>
+    </div>
+    <div class="card" id="s-lessons">
+      <div class="card-title">📖 บทเรียนที่ผ่านแล้ว</div>
+      <div id="p-lessons-content"></div>
+    </div>
+    <div class="card" id="s-history" style="display:none">
+      <div class="card-title" style="justify-content:space-between">
+        <span>📋 ประวัติการใช้เวลาทั้งหมด</span>
+        <span id="p-hist-count" style="font-size:12px;color:var(--text2);font-weight:400"></span>
       </div>
-      <!-- Admin log entry on behalf of mentor -->
-      <div class="card">
-        <div class="card-title">✏️ บันทึกแทนพี่เลี้ยง</div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>วันที่</th><th>ประเภท</th><th>บทเรียน</th><th>โน้ต</th><th>ชม.</th><th></th></tr></thead>
+        <tbody id="p-hist-tbody"></tbody></table>
+      </div>
+      <div class="empty" id="p-hist-empty" style="display:none">ยังไม่มีบันทึก</div>
+    </div>
+    <div class="card" id="s-counsel" style="display:none">
+      <div class="card-title">💬 ประวัติการปรึกษา / หนุนใจพัฒนาชีวิต</div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>วันที่</th><th>ประเภท</th><th>รายละเอียด</th><th>ชม.</th></tr></thead>
+        <tbody id="p-counsel-tbody"></tbody></table>
+      </div>
+      <div class="empty" id="p-counsel-empty" style="display:none">ยังไม่มีบันทึก</div>
+    </div>
+    <div class="card" id="s-problem" style="display:none">
+      <div class="card-title">🔧 ตารางแก้ไขปัญหาชีวิต</div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>วันที่</th><th>รายละเอียดปัญหา</th><th></th></tr></thead>
+        <tbody id="p-problem-tbody"></tbody></table>
+      </div>
+      <div class="empty" id="p-problem-empty" style="display:none">ยังไม่มีบันทึก</div>
+      <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
+        <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">➕ เพิ่มบันทึกปัญหา</div>
         <div class="form-row">
-          <div class="form-group" style="max-width:140px">
-            <label>พี่เลี้ยง</label>
-            <select id="af-mentor" onchange="refreshAdminLambSelect()"></select>
-          </div>
-          <div class="form-group" style="min-width:130px">
-            <label>ลูกแกะ</label>
-            <select id="af-lamb"></select>
-          </div>
-          <div class="form-group" style="max-width:160px">
-            <label>วันที่</label>
-            <input type="date" id="af-date">
-          </div>
-          <div class="form-group" style="max-width:200px">
-            <label>ประเภทกิจกรรม</label>
-            <select id="af-content" onchange="onAdminContentChange()">
-              <option value="สอนบทเรียน">📖 สอนบทเรียน</option>
-              <option value="ติดตามชีวิต">💬 ติดตามชีวิต</option>
-              <option value="หนุนใจ">❤️ หนุนใจ / พัฒนาชีวิต</option>
-              <option value="แก้ไขปัญหา">🔧 แก้ไขปัญหาชีวิต</option>
-              <option value="กิจกรรม">🎯 กิจกรรม / รับใช้ร่วม</option>
-              <option value="อื่นๆ">📌 อื่นๆ</option>
-            </select>
-          </div>
+          <div class="form-group"><label>รายละเอียด</label><textarea id="prob-note" rows="2" placeholder="ปัญหาหรือสถานการณ์..."></textarea></div>
+          <div class="form-group" style="max-width:150px"><label>วันที่</label><input type="date" id="prob-date"></div>
         </div>
-        <div class="form-row" id="af-lesson-row">
-          <div class="form-group"><label>ชุดบทเรียน</label>
-            <select id="af-lset" onchange="updateAdminLessonItems()">
-              <option value="">-- เลือกชุด --</option>
-            </select>
-          </div>
-          <div class="form-group"><label>บท / หัวข้อ</label>
-            <select id="af-lsec"><option value="">-- เลือกบท --</option></select>
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label>รายละเอียด / โน้ต</label><textarea id="af-note" rows="2" placeholder="รายละเอียด..."></textarea></div>
-          <div class="form-group" style="max-width:110px"><label>เวลา (ชม.)</label><input type="number" id="af-dur" value="1" min="0.5" step="0.5"></div>
-        </div>
-        <button class="btn btn-primary btn-sm" onclick="adminAddLog()">+ บันทึกแทน</button>
+        <button class="btn btn-primary btn-sm" onclick="addProblemNote()">+ บันทึก</button>
       </div>
-      <!-- All logs -->
-      <div class="card">
-        <div class="card-title">📋 บันทึกทั้งหมด</div>
-        <div style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap">
-          <select id="admin-filter-mentor" onchange="renderAdminLogs()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px">
-            <option value="">ทุกพี่เลี้ยง</option>
-          </select>
-          <select id="admin-filter-content" onchange="renderAdminLogs()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px">
-            <option value="">ทุกประเภท</option>
-            <option>สอนบทเรียน</option><option>ติดตามชีวิต</option>
-            <option>หนุนใจ</option><option>แก้ไขปัญหา</option><option>กิจกรรม</option><option>อื่นๆ</option>
+    </div>
+    <div class="card" id="s-notes" style="display:none">
+      <div class="card-title">📝 โน้ตลักษณะปัจจุบัน</div>
+      <textarea id="current-note" rows="5" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:14px" placeholder="บันทึกลักษณะนิสัย จุดแข็ง จุดที่ต้องพัฒนา..."></textarea>
+      <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="saveCurrentNote()">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN PAGE -->
+<div class="page" id="admin-page">
+  <!-- Stats -->
+  <div class="card">
+    <div class="card-title">🔑 Admin — สรุปภาพรวม</div>
+    <div class="stat-grid" id="admin-stats"></div>
+  </div>
+  <!-- Chart -->
+  <div class="card">
+    <div class="card-title">📊 สถิติเวลา (ไม่ระบุชื่อพี่เลี้ยง)</div>
+    <div class="stabs">
+      <button class="stab active" onclick="showAdminChart('weekly',this)">รายสัปดาห์</button>
+      <button class="stab" onclick="showAdminChart('monthly',this)">รายเดือน</button>
+      <button class="stab" onclick="showAdminChart('yearly',this)">รายปี</button>
+    </div>
+    <div id="admin-chart"></div>
+  </div>
+  <!-- Mentor summary (anonymous for report) -->
+  <div class="card">
+    <div class="card-title">👥 สรุปรายพี่เลี้ยง</div>
+    <div class="tbl-wrap">
+      <table><thead><tr><th>พี่เลี้ยง</th><th>Care Group</th><th>ลูกแกะ</th><th>บันทึก</th><th>เวลารวม (ชม.)</th><th>สัปดาห์นี้</th></tr></thead>
+      <tbody id="admin-mentor-tbody"></tbody></table>
+    </div>
+  </div>
+  <!-- Manage Lambs -->
+  <div class="card" id="admin-manage-card">
+    <div class="card-title">⚙️ จัดการลูกแกะ</div>
+    <div class="manage-section">
+      <h4>➕ เพิ่มลูกแกะใหม่</h4>
+      <div class="form-row">
+        <div class="form-group"><label>ชื่อลูกแกะ</label><input type="text" id="new-lamb-name" placeholder="ชื่อ"></div>
+        <div class="form-group"><label>พี่เลี้ยง</label>
+          <select id="new-lamb-mentor"></select>
+        </div>
+        <div class="form-group"><label>Care Group</label>
+          <select id="new-lamb-group">
+            <option value="Advance Pro">Advance Pro</option>
+            <option value="Startup Pro">Startup Pro</option>
+            <option value="Protharam">Protharam</option>
           </select>
         </div>
-        <div class="tbl-wrap">
-          <table><thead><tr><th>วันที่</th><th>พี่เลี้ยง</th><th>ลูกแกะ</th><th>ประเภท</th><th>บทเรียน</th><th>โน้ต</th><th>ชม.</th><th></th></tr></thead>
-          <tbody id="admin-log-tbody"></tbody></table>
-        </div>
-        <div class="empty" id="admin-log-empty" style="display:none">ไม่มีบันทึก</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="adminAddLamb()">+ เพิ่ม</button>
+    </div>
+    <div class="manage-section">
+      <h4>🗑️ ลูกแกะทั้งหมด (คลิกเพื่อลบ)</h4>
+      <div id="admin-lamb-list" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+    </div>
+  </div>
+  <!-- Admin log entry on behalf of mentor -->
+  <div class="card">
+    <div class="card-title">✏️ บันทึกแทนพี่เลี้ยง</div>
+    <div class="form-row">
+      <div class="form-group" style="max-width:140px">
+        <label>พี่เลี้ยง</label>
+        <select id="af-mentor" onchange="refreshAdminLambSelect()"></select>
+      </div>
+      <div class="form-group" style="min-width:130px">
+        <label>ลูกแกะ</label>
+        <select id="af-lamb"></select>
+      </div>
+      <div class="form-group" style="max-width:160px">
+        <label>วันที่</label>
+        <input type="date" id="af-date">
+      </div>
+      <div class="form-group" style="max-width:200px">
+        <label>ประเภทกิจกรรม</label>
+        <select id="af-content" onchange="onAdminContentChange()">
+          <option value="สอนบทเรียน">📖 สอนบทเรียน</option>
+          <option value="ติดตามชีวิต">💬 ติดตามชีวิต</option>
+          <option value="หนุนใจ">❤️ หนุนใจ / พัฒนาชีวิต</option>
+          <option value="แก้ไขปัญหา">🔧 แก้ไขปัญหาชีวิต</option>
+          <option value="กิจกรรม">🎯 กิจกรรม / รับใช้ร่วม</option>
+          <option value="อื่นๆ">📌 อื่นๆ</option>
+        </select>
       </div>
     </div>
+    <div class="form-row" id="af-lesson-row">
+      <div class="form-group"><label>ชุดบทเรียน</label>
+        <select id="af-lset" onchange="updateAdminLessonItems()">
+          <option value="">-- เลือกชุด --</option>
+        </select>
+      </div>
+      <div class="form-group"><label>บท / หัวข้อ</label>
+        <select id="af-lsec"><option value="">-- เลือกบท --</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>รายละเอียด / โน้ต</label><textarea id="af-note" rows="2" placeholder="รายละเอียด..."></textarea></div>
+      <div class="form-group" style="max-width:110px"><label>เวลา (ชม.)</label><input type="number" id="af-dur" value="1" min="0.5" step="0.5"></div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="adminAddLog()">+ บันทึกแทน</button>
+  </div>
+  <!-- All logs -->
+  <div class="card">
+    <div class="card-title">📋 บันทึกทั้งหมด</div>
+    <div style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap">
+      <select id="admin-filter-mentor" onchange="renderAdminLogs()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px">
+        <option value="">ทุกพี่เลี้ยง</option>
+      </select>
+      <select id="admin-filter-content" onchange="renderAdminLogs()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px">
+        <option value="">ทุกประเภท</option>
+        <option>สอนบทเรียน</option><option>ติดตามชีวิต</option>
+        <option>หนุนใจ</option><option>แก้ไขปัญหา</option><option>กิจกรรม</option><option>อื่นๆ</option>
+      </select>
+    </div>
+    <div class="tbl-wrap">
+      <table><thead><tr><th>วันที่</th><th>พี่เลี้ยง</th><th>ลูกแกะ</th><th>ประเภท</th><th>บทเรียน</th><th>โน้ต</th><th>ชม.</th><th></th></tr></thead>
+      <tbody id="admin-log-tbody"></tbody></table>
+    </div>
+    <div class="empty" id="admin-log-empty" style="display:none">ไม่มีบันทึก</div>
+  </div>
+</div>
+```
 
   </div><!-- /content -->
 </div><!-- /app -->
@@ -483,8 +493,21 @@ async function initFirebase(){
     db = firebase.firestore();
     // Test connection & load lambs
     await loadLambs();
-    document.getElementById('loading-overlay').style.display='none';
-    document.getElementById('login-page').style.display='flex';
+    // restore session หลัง refresh
+    const savedMentor=sessionStorage.getItem('ln_mentor');
+    if(savedMentor){
+      currentMentor=savedMentor;
+      const isAdmin=savedMentor==='admin';
+      document.getElementById('topbar-user').textContent=isAdmin?'🔑 Admin':('พี่เลี้ยง: '+savedMentor+' | '+(MENTOR_GROUPS[savedMentor]||''));
+      document.getElementById('admin-nav-btn').style.display=isAdmin?'':'none';
+      document.getElementById('loading-overlay').style.display='none';
+      document.getElementById('app').style.display='flex';
+      showPage('log-page',document.getElementById('nav-log'));
+      initApp();
+    } else {
+      document.getElementById('loading-overlay').style.display='none';
+      document.getElementById('login-page').style.display='flex';
+    }
   }catch(e){
     document.getElementById('loading-msg').textContent='❌ เชื่อมต่อ Firebase ไม่ได้ — ตรวจสอบ config อีกครั้ง';
     console.error(e);
@@ -610,6 +633,7 @@ async function doLogin(){
   btn.disabled=true;btn.textContent='กำลังโหลด...';
   await loadLambs();
   currentMentor=name;selectedLambId=null;
+  sessionStorage.setItem('ln_mentor',name);
   document.getElementById('login-page').style.display='none';
   document.getElementById('app').style.display='flex';
   const isAdmin=name==='admin';
@@ -621,6 +645,7 @@ async function doLogin(){
 }
 function logout(){
   currentMentor=null;selectedLambId=null;
+  sessionStorage.removeItem('ln_mentor');
   document.getElementById('app').style.display='none';
   document.getElementById('login-page').style.display='flex';
   document.getElementById('mentor-input').value='';
@@ -671,7 +696,17 @@ function initApp(){
 }
 function fillLambSelect(){
   const myLambs=currentMentor==='admin'?LAMBS:LAMBS.filter(l=>l.mentor===currentMentor);
-  document.getElementById('f-lamb').innerHTML=myLambs.map(l=>`<option value="${l.id}">${l.name}</option>`).join('');
+  const sel=document.getElementById('f-lamb');
+  sel.innerHTML=myLambs.map(l=>`<option value="${l.id}">${l.name}</option>`).join('');
+  // remove old listener ก่อนเพิ่มใหม่
+  sel.onchange=resetLogForm;
+}
+function resetLogForm(){
+  document.getElementById('f-lset').value='';
+  document.getElementById('f-lsec').innerHTML='<option value="">-- เลือกบท --</option>';
+  document.getElementById('f-note').value='';
+  document.getElementById('f-dur').value='1';
+  document.getElementById('lesson-row').style.display=document.getElementById('f-content').value==='สอนบทเรียน'?'flex':'none';
 }
 function fillLessonSets(){
   const sel=document.getElementById('f-lset');
@@ -734,18 +769,32 @@ async function addLog(){
   const btn=document.getElementById('save-log-btn');
   btn.disabled=true;btn.textContent='กำลังบันทึก...';
   const lset=document.getElementById('f-lset').value;
+  const lsec=document.getElementById('f-lsec').value;
+  const content=document.getElementById('f-content').value;
   await saveLog({
     mentor:currentMentor,lambId,lambName:lamb.name,group:lamb.group,
-    date,content:document.getElementById('f-content').value,
+    date,content,
     lset,lsetName:lset?LESSONS[lset]?.name:'',
-    lsec:document.getElementById('f-lsec').value,
+    lsec,
     note:document.getElementById('f-note').value.trim(),
     dur:parseFloat(document.getElementById('f-dur').value)||1,
     ts:Date.now()
   });
+  // reset form หลังบันทึก
   document.getElementById('f-note').value='';
+  document.getElementById('f-lset').value='';
+  document.getElementById('f-lsec').innerHTML='<option value="">-- เลือกบท --</option>';
+  document.getElementById('f-dur').value='1';
+  document.getElementById('lesson-row').style.display=content==='สอนบทเรียน'?'flex':'none';
   btn.disabled=false;btn.textContent='+ บันทึก';
   showToast('✓ บันทึกแล้ว');
+  // ถ้ากำลังดูประวัติลูกแกะคนนั้นอยู่ → refresh ทันที
+  if(selectedLambId===lambId){
+    await renderLambDetail(lambId);
+  } else {
+    // set selectedLambId ไว้ เพื่อให้พอกดประวัติลูกแกะ → ขึ้นทันที
+    selectedLambId=lambId;
+  }
 }
 async function adminAddLog(){
   const mentor=document.getElementById('af-mentor').value;
@@ -774,9 +823,14 @@ async function adminAddLog(){
 function renderLambGrid(){
   const myLambs=currentMentor==='admin'?LAMBS:LAMBS.filter(l=>l.mentor===currentMentor);
   document.getElementById('lamb-grid').innerHTML=myLambs.map(l=>
-    `<button class="lamb-btn" onclick="selectLamb('${l.id}',this)">${l.name}</button>`
+    `<button class="lamb-btn ${l.id===selectedLambId?'active':''}" onclick="selectLamb('${l.id}',this)">${l.name}</button>`
   ).join('');
-  document.getElementById('lamb-detail').style.display='none';
+  // ถ้ามี selectedLambId อยู่แล้ว (กลับมาจากหน้าบันทึก) → โหลดข้อมูลทันที
+  if(selectedLambId){
+    renderLambDetail(selectedLambId);
+  } else {
+    document.getElementById('lamb-detail').style.display='none';
+  }
 }
 async function selectLamb(id,btn){
   selectedLambId=id;
@@ -1011,5 +1065,6 @@ function formatDate(d){
 // ── BOOT
 initFirebase();
 </script>
+
 </body>
 </html>
