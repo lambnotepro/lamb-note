@@ -502,8 +502,21 @@ async function initFirebase(){
       document.getElementById('admin-nav-btn').style.display=isAdmin?'':'none';
       document.getElementById('loading-overlay').style.display='none';
       document.getElementById('app').style.display='flex';
-      showPage('log-page',document.getElementById('nav-log'));
       initApp();
+      // restore หน้าที่อยู่ก่อน refresh
+      const savedPage=sessionStorage.getItem('ln_page')||'log-page';
+      const savedLamb=sessionStorage.getItem('ln_lamb')||'';
+      const navMap={'log-page':'nav-log','profile-page':'nav-profile','admin-page':'admin-nav-btn'};
+      const navBtn=document.getElementById(navMap[savedPage]||'nav-log');
+      document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+      document.getElementById(savedPage).classList.add('active');
+      if(navBtn)navBtn.classList.add('active');
+      if(savedPage==='profile-page'){
+        selectedLambId=savedLamb||null;
+        renderLambGrid();
+      }
+      if(savedPage==='admin-page')renderAdmin();
     } else {
       document.getElementById('loading-overlay').style.display='none';
       document.getElementById('login-page').style.display='flex';
@@ -646,6 +659,8 @@ async function doLogin(){
 function logout(){
   currentMentor=null;selectedLambId=null;
   sessionStorage.removeItem('ln_mentor');
+  sessionStorage.removeItem('ln_page');
+  sessionStorage.removeItem('ln_lamb');
   document.getElementById('app').style.display='none';
   document.getElementById('login-page').style.display='flex';
   document.getElementById('mentor-input').value='';
@@ -666,7 +681,11 @@ function showPage(id,btn){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   btn.classList.add('active');
-  if(id==='profile-page'){selectedLambId=null;renderLambGrid();}
+  sessionStorage.setItem('ln_page',id);
+  if(id==='profile-page'){
+    if(!selectedLambId)renderLambGrid();
+    else renderLambGrid();
+  }
   if(id==='admin-page')renderAdmin();
 }
 function showStab(id,btn){
@@ -788,12 +807,12 @@ async function addLog(){
   document.getElementById('lesson-row').style.display=content==='สอนบทเรียน'?'flex':'none';
   btn.disabled=false;btn.textContent='+ บันทึก';
   showToast('✓ บันทึกแล้ว');
+  // set selectedLambId เสมอ และ save ใน session
+  selectedLambId=lambId;
+  sessionStorage.setItem('ln_lamb',lambId);
   // ถ้ากำลังดูประวัติลูกแกะคนนั้นอยู่ → refresh ทันที
-  if(selectedLambId===lambId){
-    await renderLambDetail(lambId);
-  } else {
-    // set selectedLambId ไว้ เพื่อให้พอกดประวัติลูกแกะ → ขึ้นทันที
-    selectedLambId=lambId;
+  if(document.getElementById('profile-page').classList.contains('active')){
+    renderLambGrid();
   }
 }
 async function adminAddLog(){
@@ -834,6 +853,7 @@ function renderLambGrid(){
 }
 async function selectLamb(id,btn){
   selectedLambId=id;
+  sessionStorage.setItem('ln_lamb',id);
   document.querySelectorAll('.lamb-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   await renderLambDetail(id);
