@@ -23,6 +23,20 @@ const FIREBASE_CONFIG = {
 const ADMIN_PASSWORD = "kc0460";
 // ไอดีที่มีสิทธิ์ pastor — เห็นสรุปภาพรวม + คนใหม่ + เพิ่ม/ลบลูกแกะได้ (แต่ไม่เห็นรายละเอียดบันทึกของพี่เลี้ยงคนอื่น)
 const PASTOR_IDS = ['ธีระ'];
+
+function setupNavForUser(name){
+  const isAdmin = name === 'admin';
+  const isPastor = PASTOR_IDS.includes(name);
+  // topbar
+  document.getElementById('topbar-user').textContent =
+    isAdmin ? '🔑 Admin' :
+    isPastor ? ('⛪ '+name+' | Pastor') :
+    ('พี่เลี้ยง: '+name+' | '+(MENTOR_GROUPS[name]||''));
+  // nav buttons
+  document.getElementById('admin-nav-btn').style.display = isAdmin ? '' : 'none';
+  const pBtn = document.getElementById('pastor-nav-btn');
+  if(pBtn) pBtn.style.display = isPastor ? '' : 'none';
+}
 // รหัสผ่านพี่เลี้ยง — Admin กรอกหลังได้รับจากพี่เลี้ยงแต่ละคน
 // รูปแบบ: 'ชื่อ': 'รหัสผ่าน'  (ถ้ายังไม่มีรหัส ให้ปล่อยว่างไว้ก่อน)
 const MENTOR_PASSWORDS = {
@@ -678,25 +692,26 @@ async function initFirebase(){
     const savedMentor=sessionStorage.getItem('ln_mentor');
     if(savedMentor){
       currentMentor=savedMentor;
-      const isAdmin=savedMentor==='admin';
-      document.getElementById('topbar-user').textContent=isAdmin?'🔑 Admin':('พี่เลี้ยง: '+savedMentor+' | '+(MENTOR_GROUPS[savedMentor]||''));
-      document.getElementById('admin-nav-btn').style.display=isAdmin?'':'none';
+      const isAdminUser=savedMentor==='admin';
+      const isPastorUser=PASTOR_IDS.includes(savedMentor);
+      setupNavForUser(savedMentor);
       document.getElementById('loading-overlay').style.display='none';
       document.getElementById('app').style.display='flex';
       initApp();
       // restore หน้าที่อยู่ก่อน refresh
-      const savedPage=sessionStorage.getItem('ln_page')||'log-page';
+      let savedPage=sessionStorage.getItem('ln_page')||'log-page';
       const savedLamb=sessionStorage.getItem('ln_lamb')||'';
+      // ป้องกัน role ผิด
+      if(savedPage==='admin-page'&&!isAdminUser) savedPage='log-page';
+      if(savedPage==='pastor-page'&&!isPastorUser) savedPage='log-page';
       const navMap={'log-page':'nav-log','profile-page':'nav-profile','outreach-page':'nav-outreach','pastor-page':'pastor-nav-btn','admin-page':'admin-nav-btn'};
       const navBtn=document.getElementById(navMap[savedPage]||'nav-log');
       document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
       document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-      document.getElementById(savedPage).classList.add('active');
+      const targetPage=document.getElementById(savedPage);
+      if(targetPage)targetPage.classList.add('active');
       if(navBtn)navBtn.classList.add('active');
-      if(savedPage==='profile-page'){
-        selectedLambId=savedLamb||null;
-        renderLambGrid();
-      }
+      if(savedPage==='profile-page'){selectedLambId=savedLamb||null;renderLambGrid();}
       if(savedPage==='outreach-page')renderOutreach();
       if(savedPage==='pastor-page')renderPastor();
       if(savedPage==='admin-page')renderAdmin();
@@ -923,10 +938,11 @@ function initApp(){
   }
 }
 function fillLambSelect(){
-  const myLambs=currentMentor==='admin'?LAMBS:LAMBS.filter(l=>l.mentor===currentMentor);
+  const isPastor=PASTOR_IDS.includes(currentMentor);
+  // pastor และ admin เห็นลูกแกะทุกคน, mentor เห็นเฉพาะของตัวเอง
+  const myLambs=(currentMentor==='admin'||isPastor)?LAMBS:LAMBS.filter(l=>l.mentor===currentMentor);
   const sel=document.getElementById('f-lamb');
   sel.innerHTML=myLambs.map(l=>`<option value="${l.id}">${l.name}</option>`).join('');
-  // remove old listener ก่อนเพิ่มใหม่
   sel.onchange=resetLogForm;
 }
 function resetLogForm(){
@@ -1058,7 +1074,8 @@ async function adminAddLog(){
 //  PROFILE
 // ══════════════════════════════════════════════════════
 function renderLambGrid(){
-  const myLambs=currentMentor==='admin'?LAMBS:LAMBS.filter(l=>l.mentor===currentMentor);
+  const isPastor=PASTOR_IDS.includes(currentMentor);
+  const myLambs=(currentMentor==='admin'||isPastor)?LAMBS:LAMBS.filter(l=>l.mentor===currentMentor);
   document.getElementById('lamb-grid').innerHTML=myLambs.map(l=>
     `<button class="lamb-btn ${l.id===selectedLambId?'active':''}" onclick="selectLamb('${l.id}',this)">${l.name}</button>`
   ).join('');
