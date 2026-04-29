@@ -865,6 +865,9 @@ async function doLogin(){
   btn.disabled=true;btn.textContent='กำลังโหลด...';
   await loadLambs();
   currentMentor=name;selectedLambId=null;
+  // ล้าง session เก่าทั้งหมดก่อน เพื่อป้องกันหน้าค้าง
+  sessionStorage.removeItem('ln_page');
+  sessionStorage.removeItem('ln_lamb');
   sessionStorage.setItem('ln_mentor',name);
   document.getElementById('login-page').style.display='none';
   document.getElementById('app').style.display='flex';
