@@ -210,6 +210,7 @@ tbody td{padding:8px 10px;vertical-align:top}
   <div class="nav">
     <button class="nav-btn active" id="nav-log" onclick="showPage('log-page',this)">✏️ บันทึก</button>
     <button class="nav-btn" id="nav-profile" onclick="showPage('profile-page',this)">👤 ประวัติลูกแกะ</button>
+    <button class="nav-btn" id="nav-outreach" onclick="showPage('outreach-page',this)">🌱 คนใหม่</button>
     <button class="nav-btn" id="admin-nav-btn" onclick="showPage('admin-page',this)" style="display:none">🔑 Admin</button>
   </div>
   <div class="content">
@@ -337,6 +338,75 @@ tbody td{padding:8px 10px;vertical-align:top}
   </div>
 </div>
 
+<!-- OUTREACH PAGE -->
+<div class="page" id="outreach-page">
+  <!-- Form เพิ่มคนใหม่ -->
+  <div class="card">
+    <div class="card-title">🌱 บันทึกการเยี่ยมเยียนคนใหม่</div>
+    <div class="form-row">
+      <div class="form-group" style="max-width:160px">
+        <label>ชื่อจริง</label>
+        <input type="text" id="or-fname" placeholder="ชื่อจริง">
+      </div>
+      <div class="form-group" style="max-width:140px">
+        <label>ชื่อเล่น</label>
+        <input type="text" id="or-nick" placeholder="ชื่อเล่น">
+      </div>
+      <div class="form-group" style="max-width:160px">
+        <label>อาชีพ / สถานะ</label>
+        <input type="text" id="or-job" placeholder="เช่น นักศึกษา, พนักงาน">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>รู้จักกับพี่น้องคนไหนในคริสตจักร</label>
+        <input type="text" id="or-contact" placeholder="เช่น เพื่อนของ ทีม, น้องของ หมิว">
+      </div>
+      <div class="form-group" style="max-width:160px">
+        <label>วันที่พบ</label>
+        <input type="date" id="or-date">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="max-width:200px">
+        <label>ความสนใจ / สถานะฝ่ายวิญญาณ</label>
+        <select id="or-status">
+          <option value="เปิดใจ">🟢 เปิดใจ / สนใจ</option>
+          <option value="กลาง">🟡 กลางๆ</option>
+          <option value="ยังไม่พร้อม">🔴 ยังไม่พร้อม</option>
+          <option value="ผู้เชื่อแล้ว">✅ เป็นผู้เชื่อแล้ว</option>
+        </select>
+      </div>
+      <div class="form-group" style="max-width:110px">
+        <label>เวลาที่ใช้ (ชม.)</label>
+        <input type="number" id="or-dur" value="1" min="0.5" step="0.5">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>โน้ต / บันทึกลักษณะ</label>
+        <textarea id="or-note" rows="3" placeholder="ลักษณะนิสัย ความสนใจ สิ่งที่คุย ขั้นตอนต่อไป..."></textarea>
+      </div>
+    </div>
+    <button class="btn btn-primary" id="or-save-btn" onclick="saveOutreach()">+ บันทึก</button>
+  </div>
+
+  <!-- รายการคนใหม่ของตัวเอง -->
+  <div class="card">
+    <div class="card-title" style="justify-content:space-between">
+      <span>📋 รายชื่อคนใหม่ที่เยี่ยมเยียน</span>
+      <span id="or-count" style="font-size:12px;color:var(--text2);font-weight:400"></span>
+    </div>
+    <div class="tbl-wrap">
+      <table><thead><tr>
+        <th>วันที่</th><th>ชื่อเล่น / ชื่อ</th><th>อาชีพ</th><th>รู้จักผ่าน</th><th>สถานะ</th><th>เวลา</th><th>โน้ต</th><th></th>
+      </tr></thead>
+      <tbody id="or-tbody"></tbody></table>
+    </div>
+    <div class="empty" id="or-empty">ยังไม่มีบันทึก</div>
+  </div>
+</div>
+
 <!-- ADMIN PAGE -->
 <div class="page" id="admin-page">
   <!-- Stats -->
@@ -346,13 +416,29 @@ tbody td{padding:8px 10px;vertical-align:top}
   </div>
   <!-- Chart -->
   <div class="card">
-    <div class="card-title">📊 สถิติเวลา (ไม่ระบุชื่อพี่เลี้ยง)</div>
+    <div class="card-title">📊 สถิติเวลา</div>
     <div class="stabs">
       <button class="stab active" onclick="showAdminChart('weekly',this)">รายสัปดาห์</button>
       <button class="stab" onclick="showAdminChart('monthly',this)">รายเดือน</button>
       <button class="stab" onclick="showAdminChart('yearly',this)">รายปี</button>
     </div>
+    <div style="margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <label style="font-size:12px;color:var(--text2);font-weight:600">แสดงแบบ:</label>
+      <button class="stab active" id="chart-mode-total" onclick="setChartMode('total',this)">📊 รวมทั้งหมด</button>
+      <button class="stab" id="chart-mode-mentor" onclick="setChartMode('mentor',this)">👥 แยกรายพี่เลี้ยง</button>
+    </div>
     <div id="admin-chart"></div>
+  </div>
+  <!-- Outreach summary for admin -->
+  <div class="card" id="admin-outreach-card">
+    <div class="card-title">🌱 สรุปคนใหม่ทุกพี่เลี้ยง</div>
+    <div class="tbl-wrap">
+      <table><thead><tr>
+        <th>พี่เลี้ยง</th><th>วันที่</th><th>ชื่อเล่น / ชื่อ</th><th>อาชีพ</th><th>รู้จักผ่าน</th><th>สถานะ</th><th>เวลา</th><th>โน้ต</th>
+      </tr></thead>
+      <tbody id="admin-or-tbody"></tbody></table>
+    </div>
+    <div class="empty" id="admin-or-empty" style="display:none">ยังไม่มีบันทึก</div>
   </div>
   <!-- Mentor summary (anonymous for report) -->
   <div class="card">
@@ -506,7 +592,7 @@ async function initFirebase(){
       // restore หน้าที่อยู่ก่อน refresh
       const savedPage=sessionStorage.getItem('ln_page')||'log-page';
       const savedLamb=sessionStorage.getItem('ln_lamb')||'';
-      const navMap={'log-page':'nav-log','profile-page':'nav-profile','admin-page':'admin-nav-btn'};
+      const navMap={'log-page':'nav-log','profile-page':'nav-profile','outreach-page':'nav-outreach','admin-page':'admin-nav-btn'};
       const navBtn=document.getElementById(navMap[savedPage]||'nav-log');
       document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
       document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
@@ -516,6 +602,7 @@ async function initFirebase(){
         selectedLambId=savedLamb||null;
         renderLambGrid();
       }
+      if(savedPage==='outreach-page')renderOutreach();
       if(savedPage==='admin-page')renderAdmin();
     } else {
       document.getElementById('loading-overlay').style.display='none';
@@ -703,9 +790,9 @@ function showPage(id,btn){
   btn.classList.add('active');
   sessionStorage.setItem('ln_page',id);
   if(id==='profile-page'){
-    if(!selectedLambId)renderLambGrid();
-    else renderLambGrid();
+    renderLambGrid();
   }
+  if(id==='outreach-page')renderOutreach();
   if(id==='admin-page')renderAdmin();
 }
 function showStab(id,btn){
@@ -724,6 +811,7 @@ function initApp(){
   document.getElementById('f-date').value=today;
   document.getElementById('prob-date').value=today;
   document.getElementById('af-date').value=today;
+  document.getElementById('or-date').value=today;
   fillLambSelect();
   fillLessonSets();
   fillAdminLessonSets();
@@ -1000,6 +1088,7 @@ async function renderAdmin(){
   renderAdminMentors(allLogs);
   renderAdminChart(currentAdminChart,allLogs);
   renderAdminLogTable(allLogs);
+  renderAdminOutreach();
   renderAdminLambManage();
 }
 function renderAdminMentors(allLogs){
@@ -1019,24 +1108,65 @@ function showAdminChart(type,btn){
   btn.classList.add('active');
   getLogs().then(logs=>renderAdminChart(type,logs));
 }
+function getDateKey(date,type){
+  if(type==='weekly')return date;
+  if(type==='monthly')return date?date.substring(0,7):'';
+  return date?date.substring(0,4):'';
+}
 function renderAdminChart(type,allLogs){
-  const now=new Date();let groups={};
-  if(type==='weekly'){
-    for(let i=6;i>=0;i--){const d=new Date(now);d.setDate(now.getDate()-i);groups[d.toISOString().split('T')[0]]=0;}
-    allLogs.forEach(l=>{if(groups.hasOwnProperty(l.date))groups[l.date]+=(l.dur||0);});
-  }else if(type==='monthly'){
-    for(let i=11;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);const k=d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0');groups[k]=0;}
-    allLogs.forEach(l=>{if(l.date){const k=l.date.substring(0,7);if(groups.hasOwnProperty(k))groups[k]+=(l.dur||0);}});
-  }else{
-    for(let i=4;i>=0;i--){const y=now.getFullYear()-i;groups[y]=0;}
-    allLogs.forEach(l=>{if(l.date){const y=parseInt(l.date.substring(0,4));if(groups.hasOwnProperty(y))groups[y]+=(l.dur||0);}});
+  const now=new Date();
+  const chartEl=document.getElementById('admin-chart');
+  if(chartMode==='mentor'){
+    // แยกรายพี่เลี้ยง
+    const mentorData={};
+    DEFAULT_MENTORS.forEach(m=>{mentorData[m]=0;});
+    allLogs.forEach(l=>{if(l.mentor&&mentorData.hasOwnProperty(l.mentor))mentorData[l.mentor]+=(l.dur||0);});
+    // กรองตาม type (weekly/monthly/yearly)
+    const filteredLogs=allLogs.filter(l=>{
+      if(!l.date)return false;
+      if(type==='weekly'){
+        const d=new Date(l.date+'T00:00:00');
+        const wStart=new Date(now);wStart.setDate(now.getDate()-6);wStart.setHours(0,0,0,0);
+        return d>=wStart;
+      }
+      if(type==='monthly'){
+        return l.date.substring(0,7)===now.getFullYear()+'-'+(now.getMonth()+1).toString().padStart(2,'0');
+      }
+      return l.date.substring(0,4)===String(now.getFullYear());
+    });
+    const mFiltered={};
+    DEFAULT_MENTORS.forEach(m=>{mFiltered[m]=0;});
+    filteredLogs.forEach(l=>{if(l.mentor&&mFiltered.hasOwnProperty(l.mentor))mFiltered[l.mentor]+=(l.dur||0);});
+    const maxVal=Math.max(...Object.values(mFiltered),1);
+    const periodLabel=type==='weekly'?'7 วันล่าสุด':type==='monthly'?'เดือนนี้':'ปีนี้';
+    chartEl.innerHTML=`<div style="font-size:12px;color:var(--text2);margin-bottom:8px">ช่วงเวลา: ${periodLabel}</div>`+
+      DEFAULT_MENTORS.map(m=>{
+        const v=mFiltered[m];const pct=Math.round(v/maxVal*100);
+        return`<div class="chart-bar-wrap">
+          <div class="chart-bar-label" style="color:var(--warm);font-weight:600">${m}</div>
+          <div class="chart-bar-bg"><div class="chart-bar-fill" style="width:${pct}%;background:var(--warm-light)">${v>0?v.toFixed(1)+' ชม.':''}</div></div>
+        </div>`;
+      }).join('');
+  } else {
+    // รวมทั้งหมด
+    let groups={};
+    if(type==='weekly'){
+      for(let i=6;i>=0;i--){const d=new Date(now);d.setDate(now.getDate()-i);groups[d.toISOString().split('T')[0]]=0;}
+      allLogs.forEach(l=>{if(groups.hasOwnProperty(l.date))groups[l.date]+=(l.dur||0);});
+    }else if(type==='monthly'){
+      for(let i=11;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);const k=d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0');groups[k]=0;}
+      allLogs.forEach(l=>{if(l.date){const k=l.date.substring(0,7);if(groups.hasOwnProperty(k))groups[k]+=(l.dur||0);}});
+    }else{
+      for(let i=4;i>=0;i--){const y=now.getFullYear()-i;groups[y]=0;}
+      allLogs.forEach(l=>{if(l.date){const y=parseInt(l.date.substring(0,4));if(groups.hasOwnProperty(y))groups[y]+=(l.dur||0);}});
+    }
+    const maxVal=Math.max(...Object.values(groups),1);
+    chartEl.innerHTML=Object.entries(groups).map(([k,v])=>{
+      const pct=Math.round(v/maxVal*100);
+      const label=type==='weekly'?formatDate(k):k;
+      return`<div class="chart-bar-wrap"><div class="chart-bar-label">${label}</div><div class="chart-bar-bg"><div class="chart-bar-fill" style="width:${pct}%">${v>0?v.toFixed(1)+' ชม.':''}</div></div></div>`;
+    }).join('');
   }
-  const maxVal=Math.max(...Object.values(groups),1);
-  document.getElementById('admin-chart').innerHTML=Object.entries(groups).map(([k,v])=>{
-    const pct=Math.round(v/maxVal*100);
-    const label=type==='weekly'?formatDate(k):k;
-    return`<div class="chart-bar-wrap"><div class="chart-bar-label">${label}</div><div class="chart-bar-bg"><div class="chart-bar-fill" style="width:${pct}%">${v>0?v.toFixed(1)+' ชม.':''}</div></div></div>`;
-  }).join('');
 }
 async function renderAdminLogs(){
   const allLogs=await getLogs();renderAdminLogTable(allLogs);
@@ -1097,6 +1227,88 @@ async function adminDeleteLamb(id,name){
 // ══════════════════════════════════════════════════════
 //  UTILS
 // ══════════════════════════════════════════════════════
+// ── OUTREACH ──
+async function saveOutreach(){
+  const nick=document.getElementById('or-nick').value.trim();
+  const fname=document.getElementById('or-fname').value.trim();
+  const date=document.getElementById('or-date').value;
+  if(!nick&&!fname){alert('กรุณาใส่ชื่อเล่นหรือชื่อจริง');return;}
+  if(!date){alert('กรุณาเลือกวันที่');return;}
+  const btn=document.getElementById('or-save-btn');
+  btn.disabled=true;btn.textContent='กำลังบันทึก...';
+  await db.collection('outreach').add({
+    mentor:currentMentor,
+    fname,nick,
+    job:document.getElementById('or-job').value.trim(),
+    contact:document.getElementById('or-contact').value.trim(),
+    status:document.getElementById('or-status').value,
+    dur:parseFloat(document.getElementById('or-dur').value)||1,
+    note:document.getElementById('or-note').value.trim(),
+    date,ts:Date.now()
+  });
+  // reset form
+  ['or-fname','or-nick','or-job','or-contact','or-note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('or-dur').value='1';
+  btn.disabled=false;btn.textContent='+ บันทึก';
+  showToast('✓ บันทึกคนใหม่แล้ว');
+  await renderOutreach();
+}
+async function renderOutreach(){
+  try{
+    const snap=await db.collection('outreach').where('mentor','==',currentMentor).get();
+    const docs=snap.docs.map(d=>({...d.data(),docId:d.id})).sort((a,b)=>(b.ts||0)-(a.ts||0));
+    const tbody=document.getElementById('or-tbody');
+    document.getElementById('or-count').textContent=`(${docs.length} คน)`;
+    if(!docs.length){tbody.innerHTML='';document.getElementById('or-empty').style.display='block';return;}
+    document.getElementById('or-empty').style.display='none';
+    const statusColor={'เปิดใจ':'badge-green','กลาง':'badge-amber','ยังไม่พร้อม':'badge-red','ผู้เชื่อแล้ว':'badge-blue'};
+    tbody.innerHTML=docs.map(d=>`<tr>
+      <td>${formatDate(d.date)}</td>
+      <td><strong>${d.nick||''}</strong>${d.fname?' / '+d.fname:''}</td>
+      <td style="font-size:12px">${d.job||'—'}</td>
+      <td style="font-size:12px">${d.contact||'—'}</td>
+      <td><span class="badge ${statusColor[d.status]||'badge-warm'}">${d.status}</span></td>
+      <td>${d.dur}</td>
+      <td style="font-size:12px;max-width:160px">${d.note||'—'}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteOutreach('${d.docId}')">ลบ</button></td>
+    </tr>`).join('');
+  }catch(e){console.error('renderOutreach:',e);}
+}
+async function deleteOutreach(docId){
+  if(!confirm('ลบบันทึกนี้?'))return;
+  await db.collection('outreach').doc(docId).delete();
+  await renderOutreach();
+}
+async function renderAdminOutreach(){
+  try{
+    const snap=await db.collection('outreach').get();
+    const docs=snap.docs.map(d=>({...d.data(),docId:d.id})).sort((a,b)=>(b.ts||0)-(a.ts||0));
+    const tbody=document.getElementById('admin-or-tbody');
+    if(!docs.length){tbody.innerHTML='';document.getElementById('admin-or-empty').style.display='block';return;}
+    document.getElementById('admin-or-empty').style.display='none';
+    const statusColor={'เปิดใจ':'badge-green','กลาง':'badge-amber','ยังไม่พร้อม':'badge-red','ผู้เชื่อแล้ว':'badge-blue'};
+    tbody.innerHTML=docs.map(d=>`<tr>
+      <td><strong>${d.mentor}</strong></td>
+      <td>${formatDate(d.date)}</td>
+      <td><strong>${d.nick||''}</strong>${d.fname?' / '+d.fname:''}</td>
+      <td style="font-size:12px">${d.job||'—'}</td>
+      <td style="font-size:12px">${d.contact||'—'}</td>
+      <td><span class="badge ${statusColor[d.status]||'badge-warm'}">${d.status}</span></td>
+      <td>${d.dur}</td>
+      <td style="font-size:12px;max-width:140px">${d.note||'—'}</td>
+    </tr>`).join('');
+  }catch(e){console.error('renderAdminOutreach:',e);}
+}
+
+// ── CHART MODE ──
+let chartMode='total';
+function setChartMode(mode,btn){
+  chartMode=mode;
+  document.querySelectorAll('#chart-mode-total,#chart-mode-mentor').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  getLogs().then(logs=>renderAdminChart(currentAdminChart,logs));
+}
+
 function formatDate(d){
   if(!d)return'—';
   try{return new Date(d+'T00:00:00').toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'});}catch(e){return d;}
