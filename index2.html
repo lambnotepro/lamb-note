@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐑 Lamb Note</title>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     🔥 FIREBASE CONFIG — ใส่ค่าของคุณตรงนี้หลังสร้าง project
+     ═══════════════════════════════════════════════════════════════ -->
+<script>
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyAx0BQ6D_k19LsojRgmoW19T51LfedFxRI",
+  authDomain:        "lamb-note.firebaseapp.com",
+  projectId:         "lamb-note",
+  storageBucket:     "lamb-note.firebasestorage.app",
+  messagingSenderId: "701135011337",
+  appId:             "1:701135011337:web:8a9d4c2deb30cf3a3ac2d8"
+};
+// รหัสผ่าน admin — เปลี่ยนได้เลย
+const ADMIN_PASSWORD = "kc0460";
+// รหัสผ่านพี่เลี้ยง — Admin กรอกหลังได้รับจากพี่เลี้ยงแต่ละคน
+// รูปแบบ: 'ชื่อ': 'รหัสผ่าน'  (ถ้ายังไม่มีรหัส ให้ปล่อยว่างไว้ก่อน)
+const MENTOR_PASSWORDS = {
+  'ทีม':       '',
+  'หมิว':      '',
+  'สิงโต':     '',
+  'คช.':       '',
+  'แพรว':      '',
+  'ทราย':      '',
+  'แมนยู':     '',
+  'โบ๊ต':      '',
+  'เจ้าคุณ':   '',
+  'ภูมิ':      '',
+  'สิบ':       '',
+  'กาเหว่า':   '',
+  'ไผ่':       '',
+  'แอม':       '',
+  'เดียร์':    '',
+  'เกด':       '',
+};
+</script>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#FDF8F2;--surface:#FFFFFF;--surface2:#F5EFE6;
+  --border:#E8D9C4;--border2:#D4BFA0;
+  --warm:#8C5C2A;--warm2:#A0692F;--warm-light:#F0E0C8;
+  --text:#3D2B1A;--text2:#7A5C3C;--text3:#A07850;
+  --green:#3B7A3B;--green-bg:#E8F5E8;
+  --red:#A03030;--red-bg:#FAE8E8;
+  --blue:#2060A0;--blue-bg:#E8F0FA;
+  --radius:10px;--radius-sm:6px;
+  --shadow:0 2px 12px rgba(140,90,40,0.10);
+}
+body{font-family:'Sarabun','Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px}
+
+/* ── LOADING OVERLAY ── */
+#loading-overlay{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:14px}
+#loading-overlay .spin{width:40px;height:40px;border:4px solid var(--warm-light);border-top-color:var(--warm);border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loading-overlay p{color:var(--text2);font-size:14px}
+
+/* ── LOGIN ── */
+#login-page{display:none;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px 36px;width:100%;max-width:400px;box-shadow:var(--shadow);text-align:center}
+.login-logo{font-size:48px;margin-bottom:8px}
+.login-title{font-size:24px;font-weight:700;color:var(--warm);margin-bottom:4px}
+.login-sub{font-size:13px;color:var(--text2);margin-bottom:28px}
+.login-label{font-size:13px;color:var(--text2);text-align:left;display:block;margin-bottom:6px;font-weight:500}
+.login-input{width:100%;padding:11px 14px;border:1.5px solid var(--border2);border-radius:var(--radius-sm);font-size:16px;background:var(--surface);color:var(--text);margin-bottom:10px;font-family:inherit}
+.login-input:focus{outline:none;border-color:var(--warm)}
+.btn-login{width:100%;padding:12px;background:var(--warm);color:#fff;border:none;border-radius:var(--radius-sm);font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;transition:background 0.15s;margin-top:8px}
+.btn-login:hover{background:var(--warm2)}
+.btn-login:disabled{opacity:0.6;cursor:default}
+.login-err{font-size:13px;color:var(--red);margin-top:10px;display:none;background:var(--red-bg);padding:8px 12px;border-radius:var(--radius-sm)}
+.login-hint{font-size:12px;color:var(--text3);margin-top:12px}
+
+/* ── APP SHELL ── */
+#app{display:none;flex-direction:column;min-height:100vh}
+.topbar{background:var(--warm);color:#fff;padding:0 16px;height:52px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(140,90,40,0.2)}
+.topbar-logo{font-size:20px;font-weight:700}
+.topbar-user{font-size:12px;opacity:0.85;margin-left:auto;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.topbar-logout{background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:5px 10px;border-radius:20px;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.topbar-logout:hover{background:rgba(255,255,255,0.3)}
+.nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 12px;display:flex;gap:2px;overflow-x:auto}
+.nav-btn{padding:11px 14px;border:none;background:none;font-size:13px;color:var(--text2);cursor:pointer;font-family:inherit;border-bottom:3px solid transparent;transition:all 0.15s;font-weight:500;white-space:nowrap}
+.nav-btn.active{color:var(--warm);border-bottom-color:var(--warm);font-weight:700}
+.nav-btn:hover:not(.active){color:var(--text);background:var(--surface2)}
+.content{flex:1;padding:16px;max-width:1100px;margin:0 auto;width:100%}
+.page{display:none}.page.active{display:block}
+
+/* ── CARDS ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);margin-bottom:16px}
+.card-title{font-size:15px;font-weight:700;color:var(--warm);margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.badge{display:inline-block;padding:2px 9px;border-radius:12px;font-size:12px;font-weight:600}
+.badge-blue{background:var(--blue-bg);color:var(--blue)}
+.badge-red{background:var(--red-bg);color:var(--red)}
+.badge-warm{background:var(--warm-light);color:var(--warm)}
+.badge-green{background:var(--green-bg);color:var(--green)}
+
+/* ── TABLE ── */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:var(--surface2);color:var(--text2);font-weight:600;padding:8px 10px;text-align:left;border-bottom:1.5px solid var(--border)}
+tbody tr{border-bottom:1px solid var(--border)}
+tbody tr:hover{background:var(--surface2)}
+tbody td{padding:8px 10px;vertical-align:top}
+
+/* ── FORM ── */
+.form-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.form-group{display:flex;flex-direction:column;gap:4px;flex:1;min-width:130px}
+.form-group label{font-size:12px;color:var(--text2);font-weight:600}
+.form-group input,.form-group select,.form-group textarea{padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;background:var(--surface);color:var(--text);transition:border-color 0.15s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--warm)}
+.form-group textarea{resize:vertical;min-height:64px;line-height:1.5}
+.btn{padding:8px 16px;border-radius:var(--radius-sm);border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s}
+.btn-primary{background:var(--warm);color:#fff}.btn-primary:hover{background:var(--warm2)}
+.btn-primary:disabled{opacity:0.5;cursor:default}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-danger{background:var(--red-bg);color:var(--red);border:1px solid #f0c0c0}.btn-danger:hover{background:#f5d0d0}
+.btn-outline{background:transparent;border:1.5px solid var(--border2);color:var(--text2)}.btn-outline:hover{border-color:var(--warm);color:var(--warm)}
+
+/* ── STATS ── */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center}
+.stat-val{font-size:26px;font-weight:700;color:var(--warm)}
+.stat-label{font-size:11px;color:var(--text2);margin-top:2px}
+
+/* ── LAMB GRID ── */
+.lamb-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.lamb-btn{padding:7px 14px;border-radius:20px;border:1.5px solid var(--border2);background:var(--surface);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;transition:all 0.15s;font-weight:500}
+.lamb-btn:hover{border-color:var(--warm);color:var(--warm);background:var(--warm-light)}
+.lamb-btn.active{background:var(--warm);color:#fff;border-color:var(--warm)}
+
+/* ── STABS ── */
+.stabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.stab{padding:6px 12px;border-radius:20px;border:1.5px solid var(--border);background:transparent;color:var(--text2);font-size:12px;cursor:pointer;font-family:inherit;font-weight:500;transition:all 0.15s}
+.stab.active{background:var(--warm-light);border-color:var(--warm);color:var(--warm);font-weight:700}
+
+/* ── LESSON TAG ── */
+.lesson-tag{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;background:var(--blue-bg);color:var(--blue);margin:2px}
+.progress-wrap{background:var(--surface2);border-radius:10px;height:7px;overflow:hidden;margin-top:4px}
+.progress-fill{height:100%;background:var(--warm);border-radius:10px;transition:width 0.4s}
+.note-section{background:var(--surface2);border-radius:var(--radius);padding:12px;margin-bottom:10px}
+.note-section h4{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px}
+
+/* ── CHART ── */
+.chart-bar-wrap{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.chart-bar-label{font-size:12px;color:var(--text2);min-width:76px;text-align:right}
+.chart-bar-bg{flex:1;background:var(--surface2);border-radius:4px;height:16px;overflow:hidden}
+.chart-bar-fill{height:100%;background:var(--warm-light);border-radius:4px;display:flex;align-items:center;padding-left:5px;font-size:11px;color:var(--warm);font-weight:600;transition:width 0.4s}
+
+/* ── MISC ── */
+.empty{text-align:center;padding:28px;color:var(--text3);font-size:13px}
+.mentor-row td:first-child{font-weight:700;color:var(--warm)}
+.saving-toast{position:fixed;bottom:20px;right:20px;background:var(--warm);color:#fff;padding:10px 18px;border-radius:20px;font-size:13px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,0.2);z-index:500;display:none;transition:opacity 0.3s}
+@media(max-width:600px){.form-row{flex-direction:column}.nav-btn{padding:10px 10px;font-size:12px}.content{padding:10px}}
+
+/* ── ADMIN MANAGE ── */
+.manage-section{background:var(--surface2);border-radius:var(--radius);padding:14px;margin-bottom:12px}
+.manage-section h4{font-size:13px;font-weight:700;color:var(--warm);margin-bottom:10px}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading-overlay">
+  <div style="font-size:36px">🐑</div>
+  <div class="spin"></div>
+  <p id="loading-msg">กำลังเชื่อมต่อ Firebase...</p>
+</div>
+
+<!-- LOGIN -->
+<div id="login-page">
+  <div class="login-card">
+    <div class="login-logo">🐑</div>
+    <div class="login-title">Lamb Note</div>
+    <div class="login-sub">ระบบบันทึกการดูแลลูกแกะ</div>
+    <label class="login-label">ชื่อพี่เลี้ยง (ภาษาไทย)</label>
+    <input class="login-input" id="mentor-input" type="text" placeholder="เช่น ทีม, หมิว, สิงโต ..." autocomplete="off" onkeydown="if(event.key==='Enter')focusPwd()" oninput="onNameInput()">
+    <label class="login-label" id="pwd-label" style="display:none">รหัสผ่าน</label>
+    <input class="login-input" id="pwd-input" type="password" placeholder="รหัสผ่าน" style="display:none" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn-login" id="login-btn" onclick="doLogin()">เข้าสู่ระบบ</button>
+    <div class="login-err" id="login-err"></div>
+    <div class="login-hint">พิมพ์ "admin" แล้วใส่รหัสผ่านสำหรับ Admin</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-logo">🐑 Lamb Note</div>
+    <div class="topbar-user" id="topbar-user"></div>
+    <button class="topbar-logout" onclick="logout()">ออกจากระบบ</button>
+  </div>
+  <div class="nav">
+    <button class="nav-btn active" id="nav-log" onclick="showPage('log-page',this)">✏️ บันทึก</button>
+    <button class="nav-btn" id="nav-profile" onclick="showPage('profile-page',this)">👤 ประวัติลูกแกะ</button>
+    <button class="nav-btn" id="admin-nav-btn" onclick="showPage('admin-page',this)" style="display:none">🔑 Admin</button>
+  </div>
+  <div class="content">
+
+    <!-- LOG PAGE -->
+    <div class="page active" id="log-page">
+      <div class="card">
+        <div class="card-title">✏️ บันทึกการใช้เวลา</div>
+        <div class="form-row">
+          <div class="form-group" style="min-width:150px">
+            <label>ลูกแกะ (Lamb)</label>
+            <select id="f-lamb"></select>
+          </div>
+          <div class="form-group" style="max-width:170px">
+            <label>วันที่</label>
+            <input type="date" id="f-date">
+          </div>
+          <div class="form-group" style="max-width:210px">
+            <label>ประเภทกิจกรรม</label>
+            <select id="f-content" onchange="onContentChange()">
+              <option value="สอนบทเรียน">📖 สอนบทเรียน</option>
+              <option value="ติดตามชีวิต">💬 ติดตามชีวิต</option>
+              <option value="หนุนใจ">❤️ หนุนใจ / พัฒนาชีวิต</option>
+              <option value="แก้ไขปัญหา">🔧 แก้ไขปัญหาชีวิต</option>
+              <option value="กิจกรรม">🎯 กิจกรรม / รับใช้ร่วม</option>
+              <option value="อื่นๆ">📌 อื่นๆ</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row" id="lesson-row">
+          <div class="form-group">
+            <label>ชุดบทเรียน</label>
+            <select id="f-lset" onchange="updateLessonItems()">
+              <option value="">-- เลือกชุด --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>บท / หัวข้อ</label>
+            <select id="f-lsec"><option value="">-- เลือกบท --</option></select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>รายละเอียด / โน้ต</label>
+            <textarea id="f-note" rows="2" placeholder="บันทึกรายละเอียด..."></textarea>
+          </div>
+          <div class="form-group" style="max-width:110px">
+            <label>เวลา (ชม.)</label>
+            <input type="number" id="f-dur" value="1" min="0.5" step="0.5">
+          </div>
+        </div>
+        <button class="btn btn-primary" id="save-log-btn" onclick="addLog()">+ บันทึก</button>
+      </div>
+    </div>
+
+    <!-- PROFILE PAGE -->
+    <div class="page" id="profile-page">
+      <div class="card">
+        <div class="card-title">👤 เลือกลูกแกะเพื่อดูประวัติ</div>
+        <div class="lamb-grid" id="lamb-grid"></div>
+      </div>
+      <div id="lamb-detail" style="display:none">
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+            <div style="font-size:32px">🐑</div>
+            <div>
+              <div style="font-size:19px;font-weight:700;color:var(--warm)" id="p-name"></div>
+              <div style="font-size:12px;color:var(--text2)" id="p-meta"></div>
+            </div>
+          </div>
+          <div class="stat-grid" id="p-stats"></div>
+        </div>
+        <div class="stabs">
+          <button class="stab active" onclick="showStab('s-lessons',this)">📖 บทเรียนที่ผ่านแล้ว</button>
+          <button class="stab" onclick="showStab('s-history',this)">📋 ประวัติการใช้เวลา</button>
+          <button class="stab" onclick="showStab('s-counsel',this)">💬 การปรึกษา / หนุนใจ</button>
+          <button class="stab" onclick="showStab('s-problem',this)">🔧 แก้ไขปัญหาชีวิต</button>
+          <button class="stab" onclick="showStab('s-notes',this)">📝 โน้ตลักษณะปัจจุบัน</button>
+        </div>
+        <div class="card" id="s-lessons">
+          <div class="card-title">📖 บทเรียนที่ผ่านแล้ว</div>
+          <div id="p-lessons-content"></div>
+        </div>
+        <div class="card" id="s-history" style="display:none">
+          <div class="card-title" style="justify-content:space-between">
+            <span>📋 ประวัติการใช้เวลาทั้งหมด</span>
+            <span id="p-hist-count" style="font-size:12px;color:var(--text2);font-weight:400"></span>
+          </div>
+          <div class="tbl-wrap">
+            <table><thead><tr><th>วันที่</th><th>ประเภท</th><th>บทเรียน</th><th>โน้ต</th><th>ชม.</th><th></th></tr></thead>
+            <tbody id="p-hist-tbody"></tbody></table>
+          </div>
+          <div class="empty" id="p-hist-empty" style="display:none">ยังไม่มีบันทึก</div>
+        </div>
+        <div class="card" id="s-counsel" style="display:none">
+          <div class="card-title">💬 ประวัติการปรึกษา / หนุนใจพัฒนาชีวิต</div>
+          <div class="tbl-wrap">
+            <table><thead><tr><th>วันที่</th><th>ประเภท</th><th>รายละเอียด</th><th>ชม.</th></tr></thead>
+            <tbody id="p-counsel-tbody"></tbody></table>
+          </div>
+          <div class="empty" id="p-counsel-empty" style="display:none">ยังไม่มีบันทึก</div>
+        </div>
+        <div class="card" id="s-problem" style="display:none">
+          <div class="card-title">🔧 ตารางแก้ไขปัญหาชีวิต</div>
+          <div class="tbl-wrap">
+            <table><thead><tr><th>วันที่</th><th>รายละเอียดปัญหา</th><th></th></tr></thead>
+            <tbody id="p-problem-tbody"></tbody></table>
+          </div>
+          <div class="empty" id="p-problem-empty" style="display:none">ยังไม่มีบันทึก</div>
+          <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
+            <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">➕ เพิ่มบันทึกปัญหา</div>
+            <div class="form-row">
+              <div class="form-group"><label>รายละเอียด</label><textarea id="prob-note" rows="2" placeholder="ปัญหาหรือสถานการณ์..."></textarea></div>
+              <div class="form-group" style="max-width:150px"><label>วันที่</label><input type="date" id="prob-date"></div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="addProblemNote()">+ บันทึก</button>
+          </div>
+        </div>
+        <div class="card" id="s-notes" style="display:none">
+          <div class="card-title">📝 โน้ตลักษณะปัจจุบัน</div>
+          <textarea id="current-note" rows="5" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:14px" placeholder="บันทึกลักษณะนิสัย จุดแข็ง จุดที่ต้องพัฒนา..."></textarea>
+          <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="saveCurrentNote()">💾 บันทึก</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN PAGE -->
+    <div class="page" id="admin-page">
+      <!-- Stats -->
+      <div class="card">
+        <div class="card-title">🔑 Admin — สรุปภาพรวม</div>
+        <div class="stat-grid" id="admin-stats"></div>
+      </div>
+      <!-- Chart -->
+      <div class="card">
+        <div class="card-title">📊 สถิติเวลา (ไม่ระบุชื่อพี่เลี้ยง)</div>
+        <div class="stabs">
+          <button class="stab active" onclick="showAdminChart('weekly',this)">รายสัปดาห์</button>
+          <button class="stab" onclick="showAdminChart('monthly',this)">รายเดือน</button>
+          <button class="stab" onclick="showAdminChart('yearly',this)">รายปี</button>
+        </div>
+        <div id="admin-chart"></div>
+      </div>
+      <!-- Mentor summary (anonymous for report) -->
+      <div class="card">
+        <div class="card-title">👥 สรุปรายพี่เลี้ยง</div>
+        <div class="tbl-wrap">
+          <table><thead><tr><th>พี่เลี้ยง</th><th>Care Group</th><th>ลูกแกะ</th><th>บันทึก</th><th>เวลารวม (ชม.)</th><th>สัปดาห์นี้</th></tr></thead>
+          <tbody id="admin-mentor-tbody"></tbody></table>
+        </div>
+      </div>
+      <!-- Manage Lambs -->
+      <div class="card" id="admin-manage-card">
+        <div class="card-title">⚙️ จัดการลูกแกะ</div>
+        <div class="manage-section">
+          <h4>➕ เพิ่มลูกแกะใหม่</h4>
+          <div class="form-row">
+            <div class="form-group"><label>ชื่อลูกแกะ</label><input type="text" id="new-lamb-name" placeholder="ชื่อ"></div>
+            <div class="form-group"><label>พี่เลี้ยง</label>
+              <select id="new-lamb-mentor"></select>
+            </div>
+            <div class="form-group"><label>Care Group</label>
+              <select id="new-lamb-group">
+                <option value="Advance Pro">Advance Pro</option>
+                <option value="Startup Pro">Startup Pro</option>
+                <option value="Protharam">Protharam</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="adminAddLamb()">+ เพิ่ม</button>
+        </div>
+        <div class="manage-section">
+          <h4>🗑️ ลูกแกะทั้งหมด (คลิกเพื่อลบ)</h4>
+          <div id="admin-lamb-list" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+        </div>
+      </div>
+      <!-- Admin log entry on behalf of mentor -->
+      <div class="card">
+        <div class="card-title">✏️ บันทึกแทนพี่เลี้ยง</div>
+        <div class="form-row">
+          <div class="form-group" style="max-width:140px">
+            <label>พี่เลี้ยง</label>
+            <select id="af-mentor" onchange="refreshAdminLambSelect()"></select>
+          </div>
+          <div class="form-group" style="min-width:130px">
+            <label>ลูกแกะ</label>
+            <select id="af-lamb"></select>
+          </div>
+          <div class="form-group" style="max-width:160px">
+            <label>วันที่</label>
+            <input type="date" id="af-date">
+          </div>
+          <div class="form-group" style="max-width:200px">
+            <label>ประเภทกิจกรรม</label>
+            <select id="af-content" onchange="onAdminContentChange()">
+              <option value="สอนบทเรียน">📖 สอนบทเรียน</option>
+              <option value="ติดตามชีวิต">💬 ติดตามชีวิต</option>
+              <option value="หนุนใจ">❤️ หนุนใจ / พัฒนาชีวิต</option>
+              <option value="แก้ไขปัญหา">🔧 แก้ไขปัญหาชีวิต</option>
+              <option value="กิจกรรม">🎯 กิจกรรม / รับใช้ร่วม</option>
+              <option value="อื่นๆ">📌 อื่นๆ</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row" id="af-lesson-row">
+          <div class="form-group"><label>ชุดบทเรียน</label>
+            <select id="af-lset" onchange="updateAdminLessonItems()">
+              <option value="">-- เลือกชุด --</option>
+            </select>
+          </div>
+          <div class="form-group"><label>บท / หัวข้อ</label>
+            <select id="af-lsec"><option value="">-- เลือกบท --</option></select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>รายละเอียด / โน้ต</label><textarea id="af-note" rows="2" placeholder="รายละเอียด..."></textarea></div>
+          <div class="form-group" style="max-width:110px"><label>เวลา (ชม.)</label><input type="number" id="af-dur" value="1" min="0.5" step="0.5"></div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="adminAddLog()">+ บันทึกแทน</button>
+      </div>
+      <!-- All logs -->
+      <div class="card">
+        <div class="card-title">📋 บันทึกทั้งหมด</div>
+        <div style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <select id="admin-filter-mentor" onchange="renderAdminLogs()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px">
+            <option value="">ทุกพี่เลี้ยง</option>
+          </select>
+          <select id="admin-filter-content" onchange="renderAdminLogs()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px">
+            <option value="">ทุกประเภท</option>
+            <option>สอนบทเรียน</option><option>ติดตามชีวิต</option>
+            <option>หนุนใจ</option><option>แก้ไขปัญหา</option><option>กิจกรรม</option><option>อื่นๆ</option>
+          </select>
+        </div>
+        <div class="tbl-wrap">
+          <table><thead><tr><th>วันที่</th><th>พี่เลี้ยง</th><th>ลูกแกะ</th><th>ประเภท</th><th>บทเรียน</th><th>โน้ต</th><th>ชม.</th><th></th></tr></thead>
+          <tbody id="admin-log-tbody"></tbody></table>
+        </div>
+        <div class="empty" id="admin-log-empty" style="display:none">ไม่มีบันทึก</div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /app -->
+
+<div class="saving-toast" id="toast">✓ บันทึกแล้ว</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  MASTER DATA
+// ══════════════════════════════════════════════════════
+const MENTOR_GROUPS = {
+  'ทีม':'Advance Pro','หมิว':'Advance Pro','สิงโต':'Startup Pro','คช.':'Startup Pro',
+  'แพรว':'Startup Pro','ทราย':'Startup Pro','แมนยู':'Startup Pro','โบ๊ต':'Startup Pro',
+  'เจ้าคุณ':'Startup Pro','ภูมิ':'Startup Pro','สิบ':'Protharam','กาเหว่า':'Protharam',
+  'ไผ่':'Protharam','แอม':'Protharam','เดียร์':'Protharam','เกด':'Protharam'
+};
+const DEFAULT_MENTORS = Object.keys(MENTOR_GROUPS);
+
+const LESSONS = {
+  'LS-01':{name:'บทเรียนผู้เชื่อใหม่',items:['บทที่ 1 : การกลับใจใหม่','บทที่ 2 : มั่นใจในความรอด','บทที่ 3 : การเฝ้าเดี่ยว','บทที่ 4 : การรู้จักพระเจ้า','บทที่ 5 : คู่มือชีวิต','บทที่ 6 : การสนทนากับพระเจ้า','บทที่ 7 : การบัพติสมาในพระวิญญาณบริสุทธิ์','บทที่ 8 : การนมัสการ','บทที่ 9 : ชัยชนะเหนือการทดลอง','บทที่ 10 : ชุมชนแห่งพระพร','บทที่ 11 : การเป็นพยาน','บทที่ 12 : พิธีมหาสนิท','บทที่ 13 : การบัพติสมาในน้ำ','บทที่ 14 : การถวายจากใจ','บทที่ 15 : การเชื่อฟังพระเจ้าและผู้นำ','บทที่ 16 : จุดยืนคริสตชน','บทที่ 17 : การชนะปัญหาชีวิต','บทที่ 18 : การมีส่วนร่วมในคริสตจักรท้องถิ่น']},
+  'LS-02':{name:'บทเรียนชุดชนะ',items:['บทที่ 1 : ชนะความกังวล','บทที่ 2 : ชนะความกลัว','บทที่ 3 : ชนะความเหงา','บทที่ 4 : ชนะความเครียด','บทที่ 5 : ชนะความท้อใจ','บทที่ 6 : ชนะความทุกข์ยาก','บทที่ 7 : ชนะความขุ่นเคืองใจ','บทที่ 8 : ชนะความโกรธ','บทที่ 9 : ชนะความขมขื่น','บทที่ 10 : ชนะการทดลอง','บทที่ 11 : ชนะนิสัยบาป','บทที่ 12 : ชนะความไร้วินัย','บทที่ 13 : ชนะใจปรักปรำ']},
+  'LS-03':{name:'บทเรียนชุดหลุมพราง',items:['หลุมพรางเศรษฐีหนุ่ม : การปฏิเสธที่จะทิ้งรูปเคารพสุดท้าย','หลุมพรางโยนาห์ : การรับใช้พระเจ้าด้วยความลังเลใจ','หลุมพรางเปรโต : การกลัวมนุษย์ยิ่งกว่าพระเจ้า','หลุมพรางซาโลมอน : ความหันเหซึ่งถึงแก่ชีวิต','หลุมพรางโยชูวา : ความบาปของการทำโดยพลการ','หลุมพรางเอลียาห์ : ยอมรับความท้อแท้ใจ','หลุมพรางดาวิด : ความบาปของการไม่ได้กำหนดขอบเขต','หลุมพรางโมเสส : ใช้ความโกรธแบบพระเจ้าในทางที่ไม่ถูกต้อง','หลุมพรางซาอูล : การปล่อยให้ความโง่กลายเป็นความบาป','หลุมพรางยาโคบ : ใช้วิธีการอย่างโลกเพื่อได้มาซึ่งพระพรของพระเจ้า','หลุมพรางเอลี','หลุมพรางแซมสัน : ความเป็นผู้นำที่โดดเด่นแต่ชีวิตขาดคุณธรรม']},
+  'LS-04':{name:'บทเรียนชุดเข้าใจ',items:['บทที่ 1 : เข้าใจชีวิตใหม่','บทที่ 2 : เข้าใจบัพติสมา','บทที่ 3 : เข้าใจบัพติสมาในพระวิญญาณบริสุทธิ์','บทที่ 4 : เข้าใจความหมายของการนมัสการ','บทที่ 5 : เข้าใจคริสตจักร','บทที่ 6 : เข้าใจการอธิษฐาน','บทที่ 7 : เข้าใจพระคัมภีร์','บทที่ 8 : เข้าใจน้ำพระทัยพระเจ้า','บทที่ 9 : เข้าใจพระกาย','บทที่ 10 : เข้าใจการเป็นพยาน','บทที่ 11 : เข้าใจการเงิน','บทที่ 12 : เข้าใจเรื่องเพศ','บทที่ 13 : เข้าใจพิธีมหาสนิท','บทที่ 14 : เข้าใจสามัคคีธรรม','บทที่ 15 : เข้าใจสิทธิอำนาจ']},
+  'LS-05':{name:'บทเรียนเพิ่มเติม',items:[]},
+};
+
+// ══════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════
+let db, currentMentor=null, selectedLambId=null, currentAdminChart='weekly';
+let LAMBS=[]; // loaded from Firestore
+
+// ══════════════════════════════════════════════════════
+//  FIREBASE INIT
+// ══════════════════════════════════════════════════════
+async function initFirebase(){
+  try{
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.firestore();
+    // Test connection & load lambs
+    await loadLambs();
+    document.getElementById('loading-overlay').style.display='none';
+    document.getElementById('login-page').style.display='flex';
+  }catch(e){
+    document.getElementById('loading-msg').textContent='❌ เชื่อมต่อ Firebase ไม่ได้ — ตรวจสอบ config อีกครั้ง';
+    console.error(e);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  FIRESTORE HELPERS
+// ══════════════════════════════════════════════════════
+async function loadLambs(){
+  const snap = await db.collection('lambs').orderBy('id').get();
+  if(snap.empty){
+    // First run — seed default lambs
+    await seedDefaultLambs();
+    const snap2 = await db.collection('lambs').orderBy('id').get();
+    LAMBS = snap2.docs.map(d=>d.data());
+  } else {
+    LAMBS = snap.docs.map(d=>d.data());
+  }
+}
+async function seedDefaultLambs(){
+  const defaults=[
+    {id:'L001',name:'สิงโต',mentor:'ทีม',group:'Advance Pro'},
+    {id:'L002',name:'ไผ่',mentor:'ทีม',group:'Advance Pro'},
+    {id:'L003',name:'คช.',mentor:'ทีม',group:'Advance Pro'},
+    {id:'L004',name:'กาเหว่า',mentor:'ทีม',group:'Advance Pro'},
+    {id:'L005',name:'เฮ้าส์',mentor:'ทีม',group:'Advance Pro'},
+    {id:'L006',name:'เบส',mentor:'ทีม',group:'Advance Pro'},
+    {id:'L007',name:'ว่าน',mentor:'ทีม',group:'Advance Pro'},
+    {id:'L008',name:'เนม',mentor:'หมิว',group:'Advance Pro'},
+    {id:'L009',name:'ดรีม(ญ.)',mentor:'หมิว',group:'Advance Pro'},
+    {id:'L010',name:'อากิ',mentor:'สิงโต',group:'Startup Pro'},
+    {id:'L011',name:'ภูมิ',mentor:'คช.',group:'Startup Pro'},
+    {id:'L012',name:'ไท',mentor:'คช.',group:'Startup Pro'},
+    {id:'L013',name:'ดรีม(ช.)',mentor:'คช.',group:'Startup Pro'},
+    {id:'L014',name:'เกด',mentor:'แพรว',group:'Startup Pro'},
+    {id:'L015',name:'เดียร์',mentor:'แพรว',group:'Startup Pro'},
+    {id:'L016',name:'น้ำผึ้ง',mentor:'ทราย',group:'Startup Pro'},
+    {id:'L017',name:'ต้า(ญ.)',mentor:'ทราย',group:'Startup Pro'},
+    {id:'L018',name:'ชาติ',mentor:'แมนยู',group:'Startup Pro'},
+    {id:'L019',name:'สกาย',mentor:'แมนยู',group:'Startup Pro'},
+    {id:'L020',name:'ปื้ด',mentor:'แมนยู',group:'Startup Pro'},
+    {id:'L021',name:'มงคล',mentor:'โบ๊ต',group:'Startup Pro'},
+    {id:'L022',name:'อิ้ง(ช)',mentor:'โบ๊ต',group:'Startup Pro'},
+    {id:'L023',name:'บ่าว',mentor:'เจ้าคุณ',group:'Startup Pro'},
+    {id:'L024',name:'เจ้าคุณ',mentor:'สิบ',group:'Protharam'},
+    {id:'L025',name:'เบียร์หลานป้า',mentor:'กาเหว่า',group:'Protharam'},
+    {id:'L026',name:'โอ๊ต',mentor:'กาเหว่า',group:'Protharam'},
+    {id:'L027',name:'ปลื้ม',mentor:'กาเหว่า',group:'Protharam'},
+    {id:'L028',name:'กิต',mentor:'กาเหว่า',group:'Protharam'},
+    {id:'L029',name:'แมนยู',mentor:'ไผ่',group:'Protharam'},
+    {id:'L030',name:'โบ๊ต',mentor:'ไผ่',group:'Protharam'},
+    {id:'L031',name:'บูม',mentor:'ไผ่',group:'Protharam'},
+    {id:'L032',name:'อิง(ญ.)',mentor:'เดียร์',group:'Protharam'},
+    {id:'L033',name:'มะตูม',mentor:'เกด',group:'Protharam'},
+  ];
+  const batch=db.batch();
+  defaults.forEach(l=>batch.set(db.collection('lambs').doc(l.id),l));
+  await batch.commit();
+}
+async function getLogs(mentor=null){
+  let q=db.collection('logs').orderBy('ts','desc');
+  if(mentor)q=q.where('mentor','==',mentor);
+  const snap=await q.get();
+  return snap.docs.map(d=>({...d.data(),docId:d.id}));
+}
+async function getLogsForLamb(lambId){
+  const snap=await db.collection('logs').where('lambId','==',lambId).orderBy('ts','desc').get();
+  return snap.docs.map(d=>({...d.data(),docId:d.id}));
+}
+async function saveLog(data){
+  await db.collection('logs').add(data);
+}
+async function deleteLogDoc(docId){
+  await db.collection('logs').doc(docId).delete();
+}
+async function getProbNotes(lambId){
+  const snap=await db.collection('probNotes').where('lambId','==',lambId).orderBy('ts','desc').get();
+  return snap.docs.map(d=>({...d.data(),docId:d.id}));
+}
+async function saveProbNote(data){await db.collection('probNotes').add(data);}
+async function deleteProbNote(docId){await db.collection('probNotes').doc(docId).delete();}
+async function getCurrentNoteFS(lambId){
+  const doc=await db.collection('lambNotes').doc(lambId).get();
+  return doc.exists?doc.data().text:'';
+}
+async function saveCurrentNoteFS(lambId,text){
+  await db.collection('lambNotes').doc(lambId).set({text});
+}
+
+// ══════════════════════════════════════════════════════
+//  LOGIN
+// ══════════════════════════════════════════════════════
+const mentorInput=()=>document.getElementById('mentor-input');
+const pwdInput=()=>document.getElementById('pwd-input');
+
+function onNameInput(){
+  const name=document.getElementById('mentor-input').value.trim();
+  const needPwd=name==='admin'||DEFAULT_MENTORS.includes(name);
+  document.getElementById('pwd-label').style.display=needPwd?'block':'none';
+  document.getElementById('pwd-input').style.display=needPwd?'block':'none';
+  if(needPwd)document.getElementById('pwd-label').textContent=name==='admin'?'รหัสผ่าน Admin':'รหัสผ่าน';
+}
+function focusPwd(){
+  const p=document.getElementById('pwd-input');
+  if(p.style.display!=='none')p.focus();else doLogin();
+}
+async function doLogin(){
+  const name=document.getElementById('mentor-input').value.trim();
+  const err=document.getElementById('login-err');
+  const btn=document.getElementById('login-btn');
+  err.style.display='none';
+  if(!name){err.textContent='กรุณาพิมพ์ชื่อ';err.style.display='block';return;}
+  const pwd=document.getElementById('pwd-input').value;
+  if(name==='admin'){
+    if(pwd!==ADMIN_PASSWORD){err.textContent='รหัสผ่าน Admin ไม่ถูกต้อง';err.style.display='block';return;}
+  } else if(!DEFAULT_MENTORS.includes(name)){
+    err.textContent='ชื่อไม่ถูกต้อง — กรุณาพิมพ์ชื่อพี่เลี้ยงให้ตรง';err.style.display='block';return;
+  } else {
+    const expected=MENTOR_PASSWORDS[name]||'';
+    if(expected&&pwd!==expected){err.textContent='รหัสผ่านไม่ถูกต้อง';err.style.display='block';return;}
+  }
+  btn.disabled=true;btn.textContent='กำลังโหลด...';
+  await loadLambs();
+  currentMentor=name;selectedLambId=null;
+  document.getElementById('login-page').style.display='none';
+  document.getElementById('app').style.display='flex';
+  const isAdmin=name==='admin';
+  document.getElementById('topbar-user').textContent=isAdmin?'🔑 Admin':('พี่เลี้ยง: '+name+' | '+(MENTOR_GROUPS[name]||''));
+  document.getElementById('admin-nav-btn').style.display=isAdmin?'':'none';
+  btn.disabled=false;btn.textContent='เข้าสู่ระบบ';
+  showPage('log-page',document.getElementById('nav-log'));
+  initApp();
+}
+function logout(){
+  currentMentor=null;selectedLambId=null;
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-page').style.display='flex';
+  document.getElementById('mentor-input').value='';
+  document.getElementById('pwd-input').value='';
+  document.getElementById('pwd-input').style.display='none';
+  document.getElementById('pwd-label').style.display='none';
+  document.getElementById('pwd-input').value='';
+  document.getElementById('login-err').style.display='none';
+  document.getElementById('login-btn').disabled=false;
+  document.getElementById('login-btn').textContent='เข้าสู่ระบบ';
+}
+
+// ══════════════════════════════════════════════════════
+//  NAV
+// ══════════════════════════════════════════════════════
+function showPage(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='profile-page'){selectedLambId=null;renderLambGrid();}
+  if(id==='admin-page')renderAdmin();
+}
+function showStab(id,btn){
+  ['s-lessons','s-history','s-counsel','s-problem','s-notes'].forEach(s=>{
+    const el=document.getElementById(s);if(el)el.style.display='none';
+  });
+  document.querySelectorAll('.stab').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).style.display='block';btn.classList.add('active');
+}
+
+// ══════════════════════════════════════════════════════
+//  APP INIT
+// ══════════════════════════════════════════════════════
+function initApp(){
+  const today=new Date().toISOString().split('T')[0];
+  document.getElementById('f-date').value=today;
+  document.getElementById('prob-date').value=today;
+  document.getElementById('af-date').value=today;
+  fillLambSelect();
+  fillLessonSets();
+  fillAdminLessonSets();
+  document.getElementById('lesson-row').style.display='flex';
+  if(currentMentor==='admin'){
+    fillAdminMentorSelect();
+    refreshAdminLambSelect();
+  }
+}
+function fillLambSelect(){
+  const myLambs=currentMentor==='admin'?LAMBS:LAMBS.filter(l=>l.mentor===currentMentor);
+  document.getElementById('f-lamb').innerHTML=myLambs.map(l=>`<option value="${l.id}">${l.name}</option>`).join('');
+}
+function fillLessonSets(){
+  const sel=document.getElementById('f-lset');
+  sel.innerHTML='<option value="">-- เลือกชุด --</option>';
+  Object.entries(LESSONS).forEach(([k,v])=>{sel.innerHTML+=`<option value="${k}">${v.name}</option>`;});
+}
+function fillAdminLessonSets(){
+  const sel=document.getElementById('af-lset');
+  sel.innerHTML='<option value="">-- เลือกชุด --</option>';
+  Object.entries(LESSONS).forEach(([k,v])=>{sel.innerHTML+=`<option value="${k}">${v.name}</option>`;});
+}
+function fillAdminMentorSelect(){
+  const mentors=DEFAULT_MENTORS;
+  document.getElementById('af-mentor').innerHTML=mentors.map(m=>`<option value="${m}">${m}</option>`).join('');
+  document.getElementById('new-lamb-mentor').innerHTML=mentors.map(m=>`<option value="${m}">${m}</option>`).join('');
+  const mf=document.getElementById('admin-filter-mentor');
+  mf.innerHTML='<option value="">ทุกพี่เลี้ยง</option>'+mentors.map(m=>`<option>${m}</option>`).join('');
+}
+function refreshAdminLambSelect(){
+  const mentor=document.getElementById('af-mentor').value;
+  const lambs=LAMBS.filter(l=>l.mentor===mentor);
+  document.getElementById('af-lamb').innerHTML=lambs.map(l=>`<option value="${l.id}">${l.name}</option>`).join('');
+}
+function onContentChange(){
+  document.getElementById('lesson-row').style.display=document.getElementById('f-content').value==='สอนบทเรียน'?'flex':'none';
+}
+function onAdminContentChange(){
+  document.getElementById('af-lesson-row').style.display=document.getElementById('af-content').value==='สอนบทเรียน'?'flex':'none';
+}
+function updateLessonItems(){
+  const sid=document.getElementById('f-lset').value;
+  const sec=document.getElementById('f-lsec');
+  sec.innerHTML='<option value="">-- เลือกบท --</option>';
+  if(sid&&LESSONS[sid])LESSONS[sid].items.forEach(i=>{sec.innerHTML+=`<option value="${i}">${i}</option>`;});
+}
+function updateAdminLessonItems(){
+  const sid=document.getElementById('af-lset').value;
+  const sec=document.getElementById('af-lsec');
+  sec.innerHTML='<option value="">-- เลือกบท --</option>';
+  if(sid&&LESSONS[sid])LESSONS[sid].items.forEach(i=>{sec.innerHTML+=`<option value="${i}">${i}</option>`;});
+}
+
+// ══════════════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════════════
+function showToast(msg='✓ บันทึกแล้ว'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.style.display='block';
+  setTimeout(()=>{t.style.display='none';},2000);
+}
+
+// ══════════════════════════════════════════════════════
+//  LOG
+// ══════════════════════════════════════════════════════
+async function addLog(){
+  const lambId=document.getElementById('f-lamb').value;
+  const date=document.getElementById('f-date').value;
+  if(!lambId||!date){alert('กรุณาเลือกลูกแกะและวันที่');return;}
+  const lamb=LAMBS.find(l=>l.id===lambId);
+  const btn=document.getElementById('save-log-btn');
+  btn.disabled=true;btn.textContent='กำลังบันทึก...';
+  const lset=document.getElementById('f-lset').value;
+  await saveLog({
+    mentor:currentMentor,lambId,lambName:lamb.name,group:lamb.group,
+    date,content:document.getElementById('f-content').value,
+    lset,lsetName:lset?LESSONS[lset]?.name:'',
+    lsec:document.getElementById('f-lsec').value,
+    note:document.getElementById('f-note').value.trim(),
+    dur:parseFloat(document.getElementById('f-dur').value)||1,
+    ts:Date.now()
+  });
+  document.getElementById('f-note').value='';
+  btn.disabled=false;btn.textContent='+ บันทึก';
+  showToast('✓ บันทึกแล้ว');
+}
+async function adminAddLog(){
+  const mentor=document.getElementById('af-mentor').value;
+  const lambId=document.getElementById('af-lamb').value;
+  const date=document.getElementById('af-date').value;
+  if(!mentor||!lambId||!date)return;
+  const lamb=LAMBS.find(l=>l.id===lambId);
+  const lset=document.getElementById('af-lset').value;
+  await saveLog({
+    mentor,lambId,lambName:lamb.name,group:lamb.group,
+    date,content:document.getElementById('af-content').value,
+    lset,lsetName:lset?LESSONS[lset]?.name:'',
+    lsec:document.getElementById('af-lsec').value,
+    note:document.getElementById('af-note').value.trim(),
+    dur:parseFloat(document.getElementById('af-dur').value)||1,
+    ts:Date.now(),byAdmin:true
+  });
+  document.getElementById('af-note').value='';
+  showToast('✓ บันทึกแทนแล้ว');
+  renderAdminLogs();
+}
+
+// ══════════════════════════════════════════════════════
+//  PROFILE
+// ══════════════════════════════════════════════════════
+function renderLambGrid(){
+  const myLambs=currentMentor==='admin'?LAMBS:LAMBS.filter(l=>l.mentor===currentMentor);
+  document.getElementById('lamb-grid').innerHTML=myLambs.map(l=>
+    `<button class="lamb-btn" onclick="selectLamb('${l.id}',this)">${l.name}</button>`
+  ).join('');
+  document.getElementById('lamb-detail').style.display='none';
+}
+async function selectLamb(id,btn){
+  selectedLambId=id;
+  document.querySelectorAll('.lamb-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  await renderLambDetail(id);
+  showStab('s-lessons',document.querySelectorAll('.stab')[0]);
+}
+async function renderLambDetail(lambId){
+  const lamb=LAMBS.find(l=>l.id===lambId);
+  if(!lamb)return;
+  document.getElementById('lamb-detail').style.display='block';
+  document.getElementById('p-name').textContent=`🐑 ${lamb.name} (${lamb.id})`;
+  document.getElementById('p-meta').textContent=`พี่เลี้ยง: ${lamb.mentor} | ${lamb.group}`;
+  const allLogs=await getLogsForLamb(lambId);
+  const totalHrs=allLogs.reduce((a,l)=>a+(l.dur||0),0);
+  const uniqueLessons=new Set(allLogs.filter(l=>l.content==='สอนบทเรียน').map(l=>l.lsec).filter(Boolean)).size;
+  document.getElementById('p-stats').innerHTML=`
+    <div class="stat-card"><div class="stat-val">${allLogs.length}</div><div class="stat-label">บันทึกทั้งหมด</div></div>
+    <div class="stat-card"><div class="stat-val">${totalHrs.toFixed(1)}</div><div class="stat-label">เวลารวม (ชม.)</div></div>
+    <div class="stat-card"><div class="stat-val">${uniqueLessons}</div><div class="stat-label">บทที่เรียนแล้ว</div></div>
+    <div class="stat-card"><div class="stat-val">${allLogs.length?formatDate(allLogs[allLogs.length-1].date):'—'}</div><div class="stat-label">ครั้งแรก</div></div>
+  `;
+  // render all sub-sections with the already-fetched logs
+  renderLessons(allLogs);
+  renderHistory(allLogs);
+  renderCounsel(allLogs);
+  renderProblems(lambId);
+  document.getElementById('current-note').value=await getCurrentNoteFS(lambId);
+}
+function renderLessons(allLogs){
+  const lessonLogs=allLogs.filter(l=>l.content==='สอนบทเรียน');
+  const doneMap={};
+  lessonLogs.forEach(l=>{if(l.lset&&l.lsec)doneMap[l.lset+'|'+l.lsec]=l.date;});
+  let html='';let anyDone=false;
+  Object.entries(LESSONS).forEach(([sid,set])=>{
+    const done=set.items.filter(item=>doneMap[sid+'|'+item]);
+    if(!done.length)return;
+    anyDone=true;
+    const pct=set.items.length?Math.round(done.length/set.items.length*100):0;
+    html+=`<div class="note-section">
+      <h4>${set.name} <span class="badge badge-blue">${done.length}/${set.items.length}</span></h4>
+      <div class="progress-wrap"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:3px">
+        ${done.map(item=>`<span class="lesson-tag" title="${formatDate(doneMap[sid+'|'+item])}">✓ ${item}</span>`).join('')}
+      </div></div>`;
+  });
+  document.getElementById('p-lessons-content').innerHTML=anyDone?html:'<div class="empty">ยังไม่มีการสอนบทเรียน</div>';
+}
+function renderHistory(allLogs){
+  const tbody=document.getElementById('p-hist-tbody');
+  document.getElementById('p-hist-count').textContent=`(${allLogs.length} รายการ)`;
+  if(!allLogs.length){tbody.innerHTML='';document.getElementById('p-hist-empty').style.display='block';return;}
+  document.getElementById('p-hist-empty').style.display='none';
+  tbody.innerHTML=allLogs.map(l=>`<tr>
+    <td>${formatDate(l.date)}</td>
+    <td><span class="badge badge-warm">${l.content}</span></td>
+    <td style="font-size:12px">${l.lsetName?`<div style="color:var(--blue);font-size:11px">${l.lsetName}</div>`:''}${l.lsec||''}</td>
+    <td style="font-size:12px;max-width:180px">${l.note||'—'}</td>
+    <td>${l.dur}</td>
+    <td><button class="btn btn-danger btn-sm" onclick="deleteLogEntry('${l.docId}')">ลบ</button></td>
+  </tr>`).join('');
+}
+function renderCounsel(allLogs){
+  const logs=allLogs.filter(l=>l.content!=='สอนบทเรียน');
+  const tbody=document.getElementById('p-counsel-tbody');
+  if(!logs.length){tbody.innerHTML='';document.getElementById('p-counsel-empty').style.display='block';return;}
+  document.getElementById('p-counsel-empty').style.display='none';
+  tbody.innerHTML=logs.map(l=>`<tr>
+    <td>${formatDate(l.date)}</td>
+    <td><span class="badge badge-warm">${l.content}</span></td>
+    <td style="font-size:12px">${l.note||'—'}</td>
+    <td>${l.dur}</td>
+  </tr>`).join('');
+}
+async function renderProblems(lambId){
+  const notes=await getProbNotes(lambId);
+  const tbody=document.getElementById('p-problem-tbody');
+  if(!notes.length){tbody.innerHTML='';document.getElementById('p-problem-empty').style.display='block';return;}
+  document.getElementById('p-problem-empty').style.display='none';
+  tbody.innerHTML=notes.map(n=>`<tr>
+    <td>${formatDate(n.date)}</td>
+    <td style="font-size:12px">${n.note}</td>
+    <td><button class="btn btn-danger btn-sm" onclick="deleteProbEntry('${n.docId}','${lambId}')">ลบ</button></td>
+  </tr>`).join('');
+}
+async function deleteLogEntry(docId){
+  if(!confirm('ลบบันทึกนี้?'))return;
+  await deleteLogDoc(docId);
+  if(selectedLambId)await renderLambDetail(selectedLambId);
+}
+async function addProblemNote(){
+  if(!selectedLambId)return;
+  const note=document.getElementById('prob-note').value.trim();
+  const date=document.getElementById('prob-date').value;
+  if(!note||!date)return;
+  await saveProbNote({lambId:selectedLambId,note,date,ts:Date.now()});
+  document.getElementById('prob-note').value='';
+  await renderProblems(selectedLambId);
+  showToast();
+}
+async function deleteProbEntry(docId,lambId){
+  if(!confirm('ลบบันทึกนี้?'))return;
+  await deleteProbNote(docId);
+  await renderProblems(lambId);
+}
+async function saveCurrentNote(){
+  if(!selectedLambId)return;
+  await saveCurrentNoteFS(selectedLambId,document.getElementById('current-note').value);
+  showToast('✓ โน้ตบันทึกแล้ว');
+}
+
+// ══════════════════════════════════════════════════════
+//  ADMIN
+// ══════════════════════════════════════════════════════
+async function renderAdmin(){
+  fillAdminMentorSelect();
+  refreshAdminLambSelect();
+  const allLogs=await getLogs();
+  const totalHrs=allLogs.reduce((a,l)=>a+(l.dur||0),0);
+  document.getElementById('admin-stats').innerHTML=`
+    <div class="stat-card"><div class="stat-val">${DEFAULT_MENTORS.length}</div><div class="stat-label">พี่เลี้ยง</div></div>
+    <div class="stat-card"><div class="stat-val">${LAMBS.length}</div><div class="stat-label">ลูกแกะ</div></div>
+    <div class="stat-card"><div class="stat-val">${allLogs.length}</div><div class="stat-label">บันทึกทั้งหมด</div></div>
+    <div class="stat-card"><div class="stat-val">${totalHrs.toFixed(1)}</div><div class="stat-label">เวลารวม (ชม.)</div></div>
+  `;
+  renderAdminMentors(allLogs);
+  renderAdminChart(currentAdminChart,allLogs);
+  renderAdminLogTable(allLogs);
+  renderAdminLambManage();
+}
+function renderAdminMentors(allLogs){
+  const now=new Date();
+  const weekStart=new Date(now);weekStart.setDate(now.getDate()-now.getDay());
+  document.getElementById('admin-mentor-tbody').innerHTML=DEFAULT_MENTORS.map(m=>{
+    const mLogs=allLogs.filter(l=>l.mentor===m);
+    const hrs=mLogs.reduce((a,l)=>a+(l.dur||0),0);
+    const wkHrs=mLogs.filter(l=>{const d=new Date(l.date);return d>=weekStart;}).reduce((a,l)=>a+(l.dur||0),0);
+    const myLambs=LAMBS.filter(l=>l.mentor===m);
+    return`<tr class="mentor-row"><td>${m}</td><td>${MENTOR_GROUPS[m]||''}</td><td>${myLambs.map(l=>l.name).join(', ')}</td><td>${mLogs.length}</td><td>${hrs.toFixed(1)}</td><td>${wkHrs.toFixed(1)}</td></tr>`;
+  }).join('');
+}
+function showAdminChart(type,btn){
+  currentAdminChart=type;
+  document.querySelectorAll('#admin-page .stab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  getLogs().then(logs=>renderAdminChart(type,logs));
+}
+function renderAdminChart(type,allLogs){
+  const now=new Date();let groups={};
+  if(type==='weekly'){
+    for(let i=6;i>=0;i--){const d=new Date(now);d.setDate(now.getDate()-i);groups[d.toISOString().split('T')[0]]=0;}
+    allLogs.forEach(l=>{if(groups.hasOwnProperty(l.date))groups[l.date]+=(l.dur||0);});
+  }else if(type==='monthly'){
+    for(let i=11;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);const k=d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0');groups[k]=0;}
+    allLogs.forEach(l=>{if(l.date){const k=l.date.substring(0,7);if(groups.hasOwnProperty(k))groups[k]+=(l.dur||0);}});
+  }else{
+    for(let i=4;i>=0;i--){const y=now.getFullYear()-i;groups[y]=0;}
+    allLogs.forEach(l=>{if(l.date){const y=parseInt(l.date.substring(0,4));if(groups.hasOwnProperty(y))groups[y]+=(l.dur||0);}});
+  }
+  const maxVal=Math.max(...Object.values(groups),1);
+  document.getElementById('admin-chart').innerHTML=Object.entries(groups).map(([k,v])=>{
+    const pct=Math.round(v/maxVal*100);
+    const label=type==='weekly'?formatDate(k):k;
+    return`<div class="chart-bar-wrap"><div class="chart-bar-label">${label}</div><div class="chart-bar-bg"><div class="chart-bar-fill" style="width:${pct}%">${v>0?v.toFixed(1)+' ชม.':''}</div></div></div>`;
+  }).join('');
+}
+async function renderAdminLogs(){
+  const allLogs=await getLogs();renderAdminLogTable(allLogs);
+}
+function renderAdminLogTable(allLogs){
+  const mFilter=document.getElementById('admin-filter-mentor').value;
+  const cFilter=document.getElementById('admin-filter-content').value;
+  let logs=allLogs;
+  if(mFilter)logs=logs.filter(l=>l.mentor===mFilter);
+  if(cFilter)logs=logs.filter(l=>l.content===cFilter);
+  const tbody=document.getElementById('admin-log-tbody');
+  if(!logs.length){tbody.innerHTML='';document.getElementById('admin-log-empty').style.display='block';return;}
+  document.getElementById('admin-log-empty').style.display='none';
+  tbody.innerHTML=logs.map(l=>`<tr>
+    <td>${formatDate(l.date)}</td>
+    <td><strong>${l.mentor}</strong>${l.byAdmin?'<span class="badge badge-red" style="margin-left:4px;font-size:10px">admin</span>':''}</td>
+    <td>${l.lambName}</td>
+    <td><span class="badge badge-warm">${l.content}</span></td>
+    <td style="font-size:11px">${l.lsetName?`<div style="color:var(--blue)">${l.lsetName}</div>`:''}${l.lsec||''}</td>
+    <td style="font-size:11px;max-width:160px">${l.note||'—'}</td>
+    <td>${l.dur}</td>
+    <td><button class="btn btn-danger btn-sm" onclick="adminDeleteLog('${l.docId}')">ลบ</button></td>
+  </tr>`).join('');
+}
+async function adminDeleteLog(docId){
+  if(!confirm('ลบบันทึกนี้?'))return;
+  await deleteLogDoc(docId);
+  await renderAdmin();
+}
+function renderAdminLambManage(){
+  document.getElementById('admin-lamb-list').innerHTML=LAMBS.map(l=>
+    `<button class="lamb-btn" style="font-size:12px;padding:5px 10px" onclick="adminDeleteLamb('${l.id}','${l.name}')">${l.name} ✕</button>`
+  ).join('');
+}
+async function adminAddLamb(){
+  const name=document.getElementById('new-lamb-name').value.trim();
+  const mentor=document.getElementById('new-lamb-mentor').value;
+  const group=document.getElementById('new-lamb-group').value;
+  if(!name||!mentor)return;
+  const ids=LAMBS.map(l=>parseInt(l.id.replace('L',''))||0);
+  const nextNum=Math.max(...ids,0)+1;
+  const newId='L'+String(nextNum).padStart(3,'0');
+  const newLamb={id:newId,name,mentor,group};
+  await db.collection('lambs').doc(newId).set(newLamb);
+  LAMBS.push(newLamb);LAMBS.sort((a,b)=>a.id.localeCompare(b.id));
+  document.getElementById('new-lamb-name').value='';
+  renderAdminLambManage();fillLambSelect();refreshAdminLambSelect();
+  showToast(`✓ เพิ่ม ${name} แล้ว`);
+}
+async function adminDeleteLamb(id,name){
+  if(!confirm(`ลบลูกแกะ "${name}" ออกจากระบบ?\n(บันทึกที่มีอยู่จะยังคงอยู่)`))return;
+  await db.collection('lambs').doc(id).delete();
+  LAMBS=LAMBS.filter(l=>l.id!==id);
+  renderAdminLambManage();fillLambSelect();refreshAdminLambSelect();
+  showToast(`✓ ลบ ${name} แล้ว`);
+}
+
+// ══════════════════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════════════════
+function formatDate(d){
+  if(!d)return'—';
+  try{return new Date(d+'T00:00:00').toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'});}catch(e){return d;}
+}
+
+// ── BOOT
+initFirebase();
+</script>
+</body>
+</html>
