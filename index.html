@@ -21,6 +21,8 @@ const FIREBASE_CONFIG = {
 };
 // รหัสผ่าน admin — เปลี่ยนได้เลย
 const ADMIN_PASSWORD = "kc0460";
+// ไอดีที่มีสิทธิ์ pastor — เห็นสรุปภาพรวม + คนใหม่ + เพิ่ม/ลบลูกแกะได้ (แต่ไม่เห็นรายละเอียดบันทึกของพี่เลี้ยงคนอื่น)
+const PASTOR_IDS = ['ธีระ'];
 // รหัสผ่านพี่เลี้ยง — Admin กรอกหลังได้รับจากพี่เลี้ยงแต่ละคน
 // รูปแบบ: 'ชื่อ': 'รหัสผ่าน'  (ถ้ายังไม่มีรหัส ให้ปล่อยว่างไว้ก่อน)
 const MENTOR_PASSWORDS = {
@@ -40,6 +42,7 @@ const MENTOR_PASSWORDS = {
   'แอม':       '',
   'เดียร์':    '',
   'เกด':       '',
+  'ธีระ':      'teerahope',
 };
 </script>
 
@@ -486,7 +489,7 @@ tbody td{padding:8px 10px;vertical-align:top}
       </div>
       <button class="btn btn-primary btn-sm" onclick="adminAddLamb()">+ เพิ่ม</button>
     </div>
-    <div class="manage-section">
+    <div class="manage-section" id="manage-delete-section">
       <h4>🗑️ ลูกแกะทั้งหมด (คลิกเพื่อลบ)</h4>
       <div id="admin-lamb-list" style="display:flex;flex-wrap:wrap;gap:8px"></div>
     </div>
@@ -570,7 +573,8 @@ const MENTOR_GROUPS = {
   'ทีม':'Advance Pro','หมิว':'Advance Pro','สิงโต':'Startup Pro','คช.':'Startup Pro',
   'แพรว':'Startup Pro','ทราย':'Startup Pro','แมนยู':'Startup Pro','โบ๊ต':'Startup Pro',
   'เจ้าคุณ':'Startup Pro','ภูมิ':'Startup Pro','สิบ':'Protharam','กาเหว่า':'Protharam',
-  'ไผ่':'Protharam','แอม':'Protharam','เดียร์':'Protharam','เกด':'Protharam'
+  'ไผ่':'Protharam','แอม':'Protharam','เดียร์':'Protharam','เกด':'Protharam',
+  'ธีระ':'Pastor'
 };
 const DEFAULT_MENTORS = Object.keys(MENTOR_GROUPS);
 
@@ -768,6 +772,7 @@ async function doLogin(){
     const expected=MENTOR_PASSWORDS[name]||'';
     if(expected&&pwd!==expected){err.textContent='รหัสผ่านไม่ถูกต้อง';err.style.display='block';return;}
   }
+  const isPastor=PASTOR_IDS.includes(name);
   btn.disabled=true;btn.textContent='กำลังโหลด...';
   await loadLambs();
   currentMentor=name;selectedLambId=null;
@@ -775,8 +780,9 @@ async function doLogin(){
   document.getElementById('login-page').style.display='none';
   document.getElementById('app').style.display='flex';
   const isAdmin=name==='admin';
-  document.getElementById('topbar-user').textContent=isAdmin?'🔑 Admin':('พี่เลี้ยง: '+name+' | '+(MENTOR_GROUPS[name]||''));
-  document.getElementById('admin-nav-btn').style.display=isAdmin?'':'none';
+  const isPastorUser=PASTOR_IDS.includes(name);
+  document.getElementById('topbar-user').textContent=isAdmin?'🔑 Admin':isPastorUser?('⛪ '+name+' | Pastor'):('พี่เลี้ยง: '+name+' | '+(MENTOR_GROUPS[name]||''));
+  document.getElementById('admin-nav-btn').style.display=(isAdmin||isPastorUser)?'':'none';
   btn.disabled=false;btn.textContent='เข้าสู่ระบบ';
   showPage('log-page',document.getElementById('nav-log'));
   initApp();
@@ -1095,6 +1101,9 @@ async function saveCurrentNote(){
 async function renderAdmin(){
   fillAdminMentorSelect();
   refreshAdminLambSelect();
+  // pastor ซ่อนส่วนลบลูกแกะ
+  const delSection=document.getElementById('manage-delete-section');
+  if(delSection)delSection.style.display=(currentMentor==='admin')?'block':'none';
   const allLogs=await getLogs();
   const totalHrs=allLogs.reduce((a,l)=>a+(l.dur||0),0);
   document.getElementById('admin-stats').innerHTML=`
