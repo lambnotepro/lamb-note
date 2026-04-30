@@ -5,6 +5,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>🐑 Lamb Note</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 
 <!-- ═══════════════════════════════════════════════════════════════
      🔥 FIREBASE CONFIG — ใส่ค่าของคุณตรงนี้หลังสร้าง project
@@ -871,10 +874,7 @@ async function doLogin(){
   sessionStorage.setItem('ln_mentor',name);
   document.getElementById('login-page').style.display='none';
   document.getElementById('app').style.display='flex';
-  const isAdmin=name==='admin';
-  const isPastorUser=PASTOR_IDS.includes(name);
-  document.getElementById('topbar-user').textContent=isAdmin?'🔑 Admin':isPastorUser?('⛪ '+name+' | Pastor'):('พี่เลี้ยง: '+name+' | '+(MENTOR_GROUPS[name]||''));
-  document.getElementById('admin-nav-btn').style.display=(isAdmin||isPastorUser)?'':'none';
+  setupNavForUser(name);
   btn.disabled=false;btn.textContent='เข้าสู่ระบบ';
   showPage('log-page',document.getElementById('nav-log'));
   initApp();
@@ -926,6 +926,8 @@ function showStab(id,btn){
 //  APP INIT
 // ══════════════════════════════════════════════════════
 function initApp(){
+  // ซ่อน/แสดง nav ให้ถูกต้องเสมอ
+  setupNavForUser(currentMentor);
   const today=new Date().toISOString().split('T')[0];
   document.getElementById('f-date').value=today;
   document.getElementById('prob-date').value=today;
@@ -1250,55 +1252,114 @@ function renderAdminChart(type,allLogs){
   const now=new Date();
   const chartEl=document.getElementById('admin-chart');
   if(chartMode==='mentor'){
-    // แยกรายพี่เลี้ยง
-    const mentorData={};
-    DEFAULT_MENTORS.forEach(m=>{mentorData[m]=0;});
-    allLogs.forEach(l=>{if(l.mentor&&mentorData.hasOwnProperty(l.mentor))mentorData[l.mentor]+=(l.dur||0);});
-    // กรองตาม type (weekly/monthly/yearly)
-    const filteredLogs=allLogs.filter(l=>{
-      if(!l.date)return false;
-      if(type==='weekly'){
-        const d=new Date(l.date+'T00:00:00');
-        const wStart=new Date(now);wStart.setDate(now.getDate()-6);wStart.setHours(0,0,0,0);
-        return d>=wStart;
-      }
-      if(type==='monthly'){
-        return l.date.substring(0,7)===now.getFullYear()+'-'+(now.getMonth()+1).toString().padStart(2,'0');
-      }
-      return l.date.substring(0,4)===String(now.getFullYear());
-    });
-    const mFiltered={};
-    DEFAULT_MENTORS.forEach(m=>{mFiltered[m]=0;});
-    filteredLogs.forEach(l=>{if(l.mentor&&mFiltered.hasOwnProperty(l.mentor))mFiltered[l.mentor]+=(l.dur||0);});
-    const maxVal=Math.max(...Object.values(mFiltered),1);
-    const periodLabel=type==='weekly'?'7 วันล่าสุด':type==='monthly'?'เดือนนี้':'ปีนี้';
-    chartEl.innerHTML=`<div style="font-size:12px;color:var(--text2);margin-bottom:8px">ช่วงเวลา: ${periodLabel}</div>`+
-      DEFAULT_MENTORS.map(m=>{
-        const v=mFiltered[m];const pct=Math.round(v/maxVal*100);
-        return`<div class="chart-bar-wrap">
-          <div class="chart-bar-label" style="color:var(--warm);font-weight:600">${m}</div>
-          <div class="chart-bar-bg"><div class="chart-bar-fill" style="width:${pct}%;background:var(--warm-light)">${v>0?v.toFixed(1)+' ชม.':''}</div></div>
-        </div>`;
-      }).join('');
-  } else {
-    // รวมทั้งหมด
-    let groups={};
+    // แยกรายพี่เลี้ยง — weekly = ตาราง 7 วัน แสดงชื่อ
     if(type==='weekly'){
-      for(let i=6;i>=0;i--){const d=new Date(now);d.setDate(now.getDate()-i);groups[d.toISOString().split('T')[0]]=0;}
-      allLogs.forEach(l=>{if(groups.hasOwnProperty(l.date))groups[l.date]+=(l.dur||0);});
-    }else if(type==='monthly'){
-      for(let i=11;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);const k=d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0');groups[k]=0;}
-      allLogs.forEach(l=>{if(l.date){const k=l.date.substring(0,7);if(groups.hasOwnProperty(k))groups[k]+=(l.dur||0);}});
-    }else{
-      for(let i=4;i>=0;i--){const y=now.getFullYear()-i;groups[y]=0;}
-      allLogs.forEach(l=>{if(l.date){const y=parseInt(l.date.substring(0,4));if(groups.hasOwnProperty(y))groups[y]+=(l.dur||0);}});
+      // สร้าง 7 วัน
+      const days=[];
+      for(let i=6;i>=0;i--){
+        const d=new Date(now);d.setDate(now.getDate()-i);
+        days.push(d.toISOString().split('T')[0]);
+      }
+      // map วัน → รายชื่อพี่เลี้ยงที่มีบันทึก
+      const dayMentors={};
+      days.forEach(d=>{dayMentors[d]=new Set();});
+      allLogs.forEach(l=>{if(dayMentors.hasOwnProperty(l.date)&&l.mentor)dayMentors[l.date].add(l.mentor);});
+      const DAY_TH=['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
+      chartEl.innerHTML=`
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead><tr>
+              ${days.map(d=>{
+                const dt=new Date(d+'T00:00:00');
+                const isToday=d===now.toISOString().split('T')[0];
+                return`<th style="padding:7px 6px;text-align:center;background:${isToday?'var(--warm)':'var(--surface2)'};color:${isToday?'white':'var(--text2)'};border:1px solid var(--border);border-radius:4px;font-weight:600;min-width:70px">
+                  <div>${DAY_TH[dt.getDay()]}</div>
+                  <div style="font-size:11px;font-weight:400;opacity:0.85">${formatDate(d)}</div>
+                </th>`;
+              }).join('')}
+            </tr></thead>
+            <tbody><tr>
+              ${days.map(d=>{
+                const mentors=[...dayMentors[d]];
+                const isToday=d===now.toISOString().split('T')[0];
+                return`<td style="padding:6px;vertical-align:top;border:1px solid var(--border);background:${isToday?'var(--warm-light)':'white'};min-width:70px">
+                  ${mentors.length
+                    ?mentors.map(m=>`<div style="background:var(--warm);color:white;border-radius:10px;padding:2px 7px;font-size:11px;margin:2px 0;text-align:center;font-weight:600">${m}</div>`).join('')
+                    :`<div style="color:var(--border2);font-size:11px;text-align:center">—</div>`}
+                </td>`;
+              }).join('')}
+            </tr></tbody>
+          </table>
+        </div>
+        <div style="font-size:11px;color:var(--text2);margin-top:8px">* แสดงพี่เลี้ยงที่มีบันทึกในแต่ละวัน</div>`;
+    } else {
+      // monthly/yearly — bar chart แยกรายพี่เลี้ยง
+      const filteredLogs=allLogs.filter(l=>{
+        if(!l.date)return false;
+        if(type==='monthly')return l.date.substring(0,7)===now.getFullYear()+'-'+(now.getMonth()+1).toString().padStart(2,'0');
+        return l.date.substring(0,4)===String(now.getFullYear());
+      });
+      const mFiltered={};
+      DEFAULT_MENTORS.forEach(m=>{mFiltered[m]=0;});
+      filteredLogs.forEach(l=>{if(l.mentor&&mFiltered.hasOwnProperty(l.mentor))mFiltered[l.mentor]+=(l.dur||0);});
+      const maxVal=Math.max(...Object.values(mFiltered),1);
+      const pLabel=type==='monthly'?'เดือนนี้':'ปีนี้';
+      chartEl.innerHTML=`<div style="font-size:12px;color:var(--text2);margin-bottom:8px">ช่วงเวลา: ${pLabel}</div>`+
+        DEFAULT_MENTORS.map(m=>{
+          const v=mFiltered[m];const pct=Math.round(v/maxVal*100);
+          return`<div class="chart-bar-wrap">
+            <div class="chart-bar-label" style="color:var(--warm);font-weight:600">${m}</div>
+            <div class="chart-bar-bg"><div class="chart-bar-fill" style="width:${pct}%;background:var(--warm-light)">${v>0?v.toFixed(1)+' ชม.':''}</div></div>
+          </div>`;
+        }).join('');
     }
-    const maxVal=Math.max(...Object.values(groups),1);
-    chartEl.innerHTML=Object.entries(groups).map(([k,v])=>{
-      const pct=Math.round(v/maxVal*100);
-      const label=type==='weekly'?formatDate(k):k;
-      return`<div class="chart-bar-wrap"><div class="chart-bar-label">${label}</div><div class="chart-bar-bg"><div class="chart-bar-fill" style="width:${pct}%">${v>0?v.toFixed(1)+' ชม.':''}</div></div></div>`;
-    }).join('');
+  } else {
+    // รวมทั้งหมด — weekly = ตาราง 7 วัน แสดงจำนวนชม.
+    if(type==='weekly'){
+      const days=[];
+      for(let i=6;i>=0;i--){const d=new Date(now);d.setDate(now.getDate()-i);days.push(d.toISOString().split('T')[0]);}
+      const dayHrs={};days.forEach(d=>{dayHrs[d]=0;});
+      allLogs.forEach(l=>{if(dayHrs.hasOwnProperty(l.date))dayHrs[l.date]+=(l.dur||0);});
+      const DAY_TH=['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
+      chartEl.innerHTML=`
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead><tr>
+              ${days.map(d=>{
+                const dt=new Date(d+'T00:00:00');
+                const isToday=d===now.toISOString().split('T')[0];
+                return`<th style="padding:7px 6px;text-align:center;background:${isToday?'var(--warm)':'var(--surface2)'};color:${isToday?'white':'var(--text2)'};border:1px solid var(--border);border-radius:4px;font-weight:600;min-width:60px">
+                  <div>${DAY_TH[dt.getDay()]}</div>
+                  <div style="font-size:11px;font-weight:400;opacity:0.85">${formatDate(d)}</div>
+                </th>`;
+              }).join('')}
+            </tr></thead>
+            <tbody><tr>
+              ${days.map(d=>{
+                const v=dayHrs[d];
+                const isToday=d===now.toISOString().split('T')[0];
+                return`<td style="padding:8px 4px;text-align:center;border:1px solid var(--border);background:${isToday?'var(--warm-light)':v>0?'var(--green-bg)':'white'};font-weight:${v>0?'700':'400'};color:${v>0?'var(--green)':'var(--border2)'};font-size:13px">
+                  ${v>0?v.toFixed(1)+'<br><span style="font-size:10px;font-weight:400;color:var(--text2)">ชม.</span>':'—'}
+                </td>`;
+              }).join('')}
+            </tr></tbody>
+          </table>
+        </div>`;
+    } else {
+      let groups={};
+      if(type==='monthly'){
+        for(let i=11;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);const k=d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0');groups[k]=0;}
+        allLogs.forEach(l=>{if(l.date){const k=l.date.substring(0,7);if(groups.hasOwnProperty(k))groups[k]+=(l.dur||0);}});
+      }else{
+        for(let i=4;i>=0;i--){const y=now.getFullYear()-i;groups[y]=0;}
+        allLogs.forEach(l=>{if(l.date){const y=parseInt(l.date.substring(0,4));if(groups.hasOwnProperty(y))groups[y]+=(l.dur||0);}});
+      }
+      const maxVal=Math.max(...Object.values(groups),1);
+      chartEl.innerHTML=Object.entries(groups).map(([k,v])=>{
+        const pct=Math.round(v/maxVal*100);
+        return`<div class="chart-bar-wrap"><div class="chart-bar-label">${k}</div><div class="chart-bar-bg"><div class="chart-bar-fill" style="width:${pct}%">${v>0?v.toFixed(1)+' ชม.':''}</div></div></div>`;
+      }).join('');
+    }
   }
 }
 async function renderAdminLogs(){
