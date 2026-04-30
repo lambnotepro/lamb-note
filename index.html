@@ -901,6 +901,11 @@ async function initFirebase(){
       if(savedPage2==='admin-page')renderAdmin();
     }
     // ถ้าไม่มี session — login page แสดงอยู่แล้ว พร้อมรับ login ทันที
+  }
+  // db พร้อมแล้ว: ถ้า login ไปแล้ว (doLogin ทำงานเร็วกว่า initFirebase) → render schedule
+  if(currentMentor && currentMentor!=='admin' && db){
+    setTimeout(()=>renderScheduleTable(), 100);
+  }
   }catch(e){
     console.error('initFirebase error:',e);
   }
@@ -1087,7 +1092,7 @@ function showPage(id,btn){
   document.getElementById(id).classList.add('active');
   btn.classList.add('active');
   sessionStorage.setItem('ln_page',id);
-  if(id==='log-page')renderScheduleTable();
+  if(id==='log-page' && db)renderScheduleTable();
   if(id==='profile-page'){
     renderLambGrid();
   }
@@ -1118,7 +1123,7 @@ function initApp(){
   fillLessonSets();
   fillAdminLessonSets();
   document.getElementById('lesson-row').style.display='flex';
-  if(currentMentor!=='admin') renderScheduleTable();
+  if(currentMentor!=='admin' && db) renderScheduleTable();
   if(currentMentor==='admin'){
     fillAdminMentorSelect();
     refreshAdminLambSelect();
@@ -1656,7 +1661,7 @@ async function adminDeleteLamb(id,name){
 // ── SCHEDULE ──
 let scheduleDay=null; // วันที่กำลังเพิ่มนัด
 
-async function renderScheduleTable(){
+async async function renderScheduleTable(){
   const days=getWeekDays();
   const now=new Date();
   const todayStr=now.toISOString().split('T')[0];
