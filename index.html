@@ -18,6 +18,12 @@ var MENTOR_GROUPS_EARLY = {
   'ไผ่':'Protharam','แอม':'Protharam','เดียร์':'Protharam','เกด':'Protharam','ธีระ':'Pastor'
 };
 var PASTOR_IDS_EARLY = ['ธีระ'];
+var MENTOR_PASSWORDS_EARLY = {
+  'ทีม':'afvxgqqd','หมิว':'Malimilamali','สิงโต':'','คช.':'1150',
+  'แพรว':'Praew1998','ทราย':'Thidarat28','แมนยู':'010143','โบ๊ต':'201412',
+  'เจ้าคุณ':'','ภูมิ':'','สิบ':'03111990','กาเหว่า':'',
+  'ไผ่':'','แอม':'','เดียร์':'','เกด':'','ธีระ':'teerahope'
+};
 function onNameInput(){
   var name = document.getElementById('mentor-input').value.trim();
   var needPwd = name==='admin' || Object.keys(MENTOR_GROUPS_EARLY).includes(name) || PASTOR_IDS_EARLY.includes(name);
@@ -49,26 +55,40 @@ window._checkFbReady = function(){
   window._fbSdkReady = (window._fbAppReady && window._fbFsReady);
 };
 function tryLogin(){
-  var btn = document.getElementById('login-btn');
-  if(typeof doLogin === 'function' && typeof db !== 'undefined' && db){
-    doLogin();
-    return;
+  // ขั้น 1: ตรวจรหัสผ่านทันที ไม่รอ Firebase
+  var name = document.getElementById('mentor-input').value.trim();
+  var pwd = document.getElementById('pwd-input').value;
+  var err = document.getElementById('login-err');
+  err.style.display='none';
+  if(!name){ err.textContent='กรุณาพิมพ์ชื่อ'; err.style.display='block'; return; }
+  // ตรวจรหัสผ่านจาก MENTOR_PASSWORDS_EARLY
+  if(name==='admin'){
+    if(pwd!=='kc0460'){ err.textContent='รหัสผ่าน Admin ไม่ถูกต้อง'; err.style.display='block'; return; }
+  } else if(!Object.keys(MENTOR_GROUPS_EARLY).includes(name)){
+    err.textContent='ชื่อไม่ถูกต้อง'; err.style.display='block'; return;
+  } else {
+    var expected = MENTOR_PASSWORDS_EARLY[name]||'';
+    if(expected && pwd!==expected){ err.textContent='รหัสผ่านไม่ถูกต้อง'; err.style.display='block'; return; }
   }
-  if(btn){ btn.disabled=true; btn.textContent='กำลังเชื่อมต่อ...'; }
-  var attempts = 0;
-  var wait = setInterval(function(){
+  // ขั้น 2: รหัสถูก → รอ Firebase แล้วเข้า app
+  var btn = document.getElementById('login-btn');
+  if(typeof db !== 'undefined' && db){
+    if(typeof doLogin==='function') doLogin(); return;
+  }
+  if(btn){ btn.disabled=true; btn.textContent='กำลังโหลด...'; }
+  var attempts=0;
+  var wait=setInterval(function(){
     attempts++;
-    if(typeof doLogin === 'function' && typeof db !== 'undefined' && db){
+    if(typeof db !== 'undefined' && db){
       clearInterval(wait);
       if(btn){ btn.disabled=false; btn.textContent='เข้าสู่ระบบ'; }
-      doLogin();
-    } else if(attempts > 20){
+      if(typeof doLogin==='function') doLogin();
+    } else if(attempts>30){
       clearInterval(wait);
       if(btn){ btn.disabled=false; btn.textContent='เข้าสู่ระบบ'; }
-      var err = document.getElementById('login-err');
-      if(err){ err.style.display='block'; err.textContent='การเชื่อมต่อช้า — ลองรีเฟรชหน้าอีกครั้ง'; }
+      err.textContent='Firebase โหลดช้า — ลองรีเฟรชหน้า'; err.style.display='block';
     }
-  }, 300);
+  },300);
 }
 </script>
 
