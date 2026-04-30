@@ -70,24 +70,8 @@ function tryLogin(){
     var expected = MENTOR_PASSWORDS_EARLY[name]||'';
     if(expected && pwd!==expected){ err.textContent='รหัสผ่านไม่ถูกต้อง'; err.style.display='block'; return; }
   }
-  // รหัสถูก — เรียก doLogin ทันที (doLogin จะรอ LAMBS เอง)
-  if(typeof doLogin==='function'){
-    doLogin();
-  } else {
-    btn.disabled=true; btn.textContent='กำลังโหลด...';
-    var t=setInterval(function(){
-      if(typeof doLogin==='function'){
-        clearInterval(t);
-        btn.disabled=false; btn.textContent='เข้าสู่ระบบ';
-        doLogin();
-      }
-    },100);
-    setTimeout(function(){
-      clearInterval(t);
-      btn.disabled=false; btn.textContent='เข้าสู่ระบบ';
-      err.textContent='โหลดช้า กรุณารีเฟรช'; err.style.display='block';
-    },8000);
-  }
+  // รหัสถูก — เข้าทันที (LAMBS hardcode แล้ว ไม่ต้องรอ Firebase)
+  doLogin();
 }
 </script>
 
@@ -846,7 +830,43 @@ const LESSONS = {
 //  STATE
 // ══════════════════════════════════════════════════════
 let db, currentMentor=null, selectedLambId=null, currentAdminChart='weekly';
-let LAMBS=[]; // loaded from Firestore
+// LAMBS: hardcode ไว้เลย ไม่รอ Firestore — login ทันที
+// admin/pastor เพิ่ม/ลบได้ผ่าน UI (sync กับ Firestore + update array นี้)
+let LAMBS = [
+  {id:'L001',name:'สิงโต',mentor:'ทีม',group:'Advance Pro'},
+  {id:'L002',name:'ไผ่',mentor:'ทีม',group:'Advance Pro'},
+  {id:'L003',name:'คช.',mentor:'ทีม',group:'Advance Pro'},
+  {id:'L004',name:'กาเหว่า',mentor:'ทีม',group:'Advance Pro'},
+  {id:'L005',name:'เฮ้าส์',mentor:'ทีม',group:'Advance Pro'},
+  {id:'L006',name:'เบส',mentor:'ทีม',group:'Advance Pro'},
+  {id:'L007',name:'ว่าน',mentor:'ทีม',group:'Advance Pro'},
+  {id:'L008',name:'เนม',mentor:'หมิว',group:'Advance Pro'},
+  {id:'L009',name:'ดรีม(ญ.)',mentor:'หมิว',group:'Advance Pro'},
+  {id:'L010',name:'อากิ',mentor:'สิงโต',group:'Startup Pro'},
+  {id:'L011',name:'ภูมิ',mentor:'คช.',group:'Startup Pro'},
+  {id:'L012',name:'ไท',mentor:'คช.',group:'Startup Pro'},
+  {id:'L013',name:'ดรีม(ช.)',mentor:'คช.',group:'Startup Pro'},
+  {id:'L014',name:'เกด',mentor:'แพรว',group:'Startup Pro'},
+  {id:'L015',name:'เดียร์',mentor:'แพรว',group:'Startup Pro'},
+  {id:'L016',name:'น้ำผึ้ง',mentor:'ทราย',group:'Startup Pro'},
+  {id:'L017',name:'ต้า(ญ.)',mentor:'ทราย',group:'Startup Pro'},
+  {id:'L018',name:'ชาติ',mentor:'แมนยู',group:'Startup Pro'},
+  {id:'L019',name:'สกาย',mentor:'แมนยู',group:'Startup Pro'},
+  {id:'L020',name:'ปื้ด',mentor:'แมนยู',group:'Startup Pro'},
+  {id:'L021',name:'มงคล',mentor:'โบ๊ต',group:'Startup Pro'},
+  {id:'L022',name:'อิ้ง(ช)',mentor:'โบ๊ต',group:'Startup Pro'},
+  {id:'L023',name:'บ่าว',mentor:'เจ้าคุณ',group:'Startup Pro'},
+  {id:'L024',name:'เจ้าคุณ',mentor:'สิบ',group:'Protharam'},
+  {id:'L025',name:'เบียร์หลานป้า',mentor:'กาเหว่า',group:'Protharam'},
+  {id:'L026',name:'โอ๊ต',mentor:'กาเหว่า',group:'Protharam'},
+  {id:'L027',name:'ปลื้ม',mentor:'กาเหว่า',group:'Protharam'},
+  {id:'L028',name:'กิต',mentor:'กาเหว่า',group:'Protharam'},
+  {id:'L029',name:'แมนยู',mentor:'ไผ่',group:'Protharam'},
+  {id:'L030',name:'โบ๊ต',mentor:'ไผ่',group:'Protharam'},
+  {id:'L031',name:'บูม',mentor:'ไผ่',group:'Protharam'},
+  {id:'L032',name:'อิง(ญ.)',mentor:'เดียร์',group:'Protharam'},
+  {id:'L033',name:'มะตูม',mentor:'เกด',group:'Protharam'},
+];
 
 // ══════════════════════════════════════════════════════
 //  FIREBASE INIT
@@ -855,15 +875,14 @@ async function initFirebase(){
   try{
     firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
-    // db พร้อมแล้ว — เริ่มโหลด lambs ทันที (background)
-    loadLambs(); // fire & forget — dedup ด้วย _lambsPromise
+    // LAMBS ไม่ต้องโหลดจาก Firestore แล้ว — hardcode ไว้แล้ว
+    // restore session ถ้ามี
     const savedMentor=sessionStorage.getItem('ln_mentor');
     if(savedMentor){
       currentMentor=savedMentor;
       const isAdminUser=savedMentor==='admin';
       const isPastorUser=PASTOR_IDS.includes(savedMentor);
       setupNavForUser(savedMentor);
-      // restore หน้า (ทำทันที ก่อน Firebase)
       let savedPage2=sessionStorage.getItem('ln_page')||'log-page';
       if(savedPage2==='admin-page'&&!isAdminUser) savedPage2='log-page';
       if(savedPage2==='pastor-page'&&!isPastorUser) savedPage2='log-page';
@@ -874,27 +893,16 @@ async function initFirebase(){
       const targetPage2=document.getElementById(savedPage2);
       if(targetPage2)targetPage2.classList.add('active');
       if(navBtn2)navBtn2.classList.add('active');
-      // รอ LAMBS โหลดเสร็จ (กำลังโหลด background อยู่)
-      var waitLambs = setInterval(()=>{
-        if(LAMBS.length || !db){
-          clearInterval(waitLambs);
-          initApp();
-          const savedLamb2=sessionStorage.getItem('ln_lamb')||'';
-          if(savedPage2==='profile-page'){selectedLambId=savedLamb2||null;renderLambGrid();}
-          if(savedPage2==='outreach-page')renderOutreach();
-          if(savedPage2==='pastor-page')renderPastor();
-          if(savedPage2==='admin-page')renderAdmin();
-        }
-      },200);
-      // timeout 5s
-      setTimeout(()=>{clearInterval(waitLambs);if(typeof initApp==='function')initApp();},5000);
-    } else {
-      // ไม่มี session — login page แสดงแล้ว
-      // loadLambs() เรียกแล้วข้างบน ไม่ต้องเรียกซ้ำ
+      initApp();
+      const savedLamb2=sessionStorage.getItem('ln_lamb')||'';
+      if(savedPage2==='profile-page'){selectedLambId=savedLamb2||null;renderLambGrid();}
+      if(savedPage2==='outreach-page')renderOutreach();
+      if(savedPage2==='pastor-page')renderPastor();
+      if(savedPage2==='admin-page')renderAdmin();
     }
+    // ถ้าไม่มี session — login page แสดงอยู่แล้ว พร้อมรับ login ทันที
   }catch(e){
-    document.getElementById('loading-msg').textContent='❌ เชื่อมต่อ Firebase ไม่ได้ — ตรวจสอบ config อีกครั้ง';
-    console.error(e);
+    console.error('initFirebase error:',e);
   }
 }
 
@@ -1033,49 +1041,19 @@ function focusPwd(){
   if(p.style.display!=='none')p.focus();else doLogin();
 }
 async function doLogin(){
+  // ฟังก์ชันนี้ถูกเรียกจาก tryLogin() เมื่อตรวจรหัสผ่านถูกต้องแล้ว
   const name=document.getElementById('mentor-input').value.trim();
   const err=document.getElementById('login-err');
   const btn=document.getElementById('login-btn');
-  err.style.display='none';
-  if(!name){err.textContent='กรุณาพิมพ์ชื่อ';err.style.display='block';return;}
-  const pwd=document.getElementById('pwd-input').value;
-  if(name==='admin'){
-    if(pwd!==ADMIN_PASSWORD){err.textContent='รหัสผ่าน Admin ไม่ถูกต้อง';err.style.display='block';return;}
-  } else if(!DEFAULT_MENTORS.includes(name)){
-    err.textContent='ชื่อไม่ถูกต้อง — กรุณาพิมพ์ชื่อพี่เลี้ยงให้ตรง';err.style.display='block';return;
-  } else {
-    const expected=MENTOR_PASSWORDS[name]||'';
-    if(expected&&pwd!==expected){err.textContent='รหัสผ่านไม่ถูกต้อง';err.style.display='block';return;}
-  }
-  const isPastor=PASTOR_IDS.includes(name);
-  btn.disabled=true;btn.textContent='กำลังโหลด...';
-  // รอ db พร้อมก่อน (max 5 วินาที)
-  if(!db){
-    await Promise.race([
-      new Promise(r=>{var t=setInterval(()=>{if(db){clearInterval(t);r();}},100);}),
-      new Promise(r=>setTimeout(r,5000))
-    ]);
-  }
-  if(!db){ 
-    err.textContent='Firebase ไม่พร้อม กรุณารีเฟรชหน้า';
-    err.style.display='block'; btn.disabled=false; btn.textContent='เข้าสู่ระบบ'; return;
-  }
-  // รอ LAMBS โหลดเสร็จ (ใช้ promise เดิมที่ initFirebase เริ่มไว้แล้ว)
-  if(!LAMBS.length){
-    await Promise.race([
-      _lambsPromise || loadLambs(),
-      new Promise(r=>setTimeout(r,5000))
-    ]);
-  }
-  currentMentor=name;selectedLambId=null;
-  // ล้าง session เก่าทั้งหมดก่อน เพื่อป้องกันหน้าค้าง
+  // LAMBS hardcode แล้ว — เข้าได้ทันที ไม่รอ Firebase
+  currentMentor=name; selectedLambId=null;
   sessionStorage.removeItem('ln_page');
   sessionStorage.removeItem('ln_lamb');
   sessionStorage.setItem('ln_mentor',name);
   document.getElementById('login-page').style.display='none';
   document.getElementById('app').style.display='flex';
   setupNavForUser(name);
-  btn.disabled=false;btn.textContent='เข้าสู่ระบบ';
+  btn.disabled=false; btn.textContent='เข้าสู่ระบบ';
   showPage('log-page',document.getElementById('nav-log'));
   initApp();
 }
