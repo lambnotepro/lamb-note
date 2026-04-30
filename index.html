@@ -1686,18 +1686,27 @@ async function renderScheduleTable(){
       const seen={};
       orSnap.docs.forEach(d=>{
         const data=d.data();
-        const key=data.nick||data.fname||d.id;
-        if(!seen[key]){seen[key]=true;outreachList.push({id:d.id,name:key});}
+        // ใช้ชื่อเล่นหรือชื่อจริงเป็น key dedup
+        const displayName=data.nick||data.fname||'?';
+        if(!seen[displayName]){
+          seen[displayName]=true;
+          outreachList.push({
+            id:d.id,           // docId ของ outreach
+            nick:data.nick||'',
+            fname:data.fname||'',
+            displayName:displayName
+          });
+        }
       });
     }catch(e){ console.error('outreach load:',e); }
   }
 
-  // สร้าง thead
-  let thead='<tr><th style="padding:4px 6px;font-size:12px;background:var(--surface2)">วัน</th>';
+  // สร้าง thead — 7 คอลัมน์ จ.ถึงอา. ไม่มีคอลัมน์ "วัน"
+  let thead='<tr>';
   days.forEach(d=>{
     const dow=new Date(d+'T00:00:00').getDay();
     const isToday=d===todayStr;
-    thead+=`<th style="padding:4px 6px;font-size:11px;background:${isToday?'var(--warm-light)':'var(--surface2)'};color:${isToday?'var(--warm)':'var(--text2)'};text-align:center">${DAY_TH[dow]}<br><span style="font-weight:400">${formatDate(d)}</span></th>`;
+    thead+=`<th style="padding:4px 6px;font-size:11px;background:${isToday?'var(--warm-light)':'var(--surface2)'};color:${isToday?'var(--warm)':'var(--text2)'};text-align:center;min-width:80px">${DAY_TH[dow]}<br><span style="font-weight:400">${formatDate(d)}</span></th>`;
   });
   thead+='</tr>';
 
@@ -1735,8 +1744,11 @@ function fillScheduleDropdowns(outreachList){
   if(lambSel) lambSel.innerHTML=myLambs.map(l=>`<option value="${l.id}" data-name="${l.name}">${l.name}</option>`).join('');
   const newSel=document.getElementById('sch-new-sel');
   if(newSel){
-    if(outreachList.length){
-      newSel.innerHTML=outreachList.map(o=>`<option value="${o.docId}" data-name="${o.nick||o.fname||'?'}">${o.nick||o.fname||'?'}${o.fname&&o.nick?' ('+o.fname+')':''}</option>`).join('');
+    if(outreachList&&outreachList.length){
+      newSel.innerHTML=outreachList.map(o=>{
+        const label=o.displayName+(o.fname&&o.nick&&o.fname!==o.nick?' ('+o.fname+')':'');
+        return `<option value="${o.id}" data-name="${o.displayName}">${label}</option>`;
+      }).join('');
     } else {
       newSel.innerHTML='<option value="">ยังไม่มีคนใหม่ที่บันทึกไว้</option>';
     }
@@ -1780,16 +1792,19 @@ async function saveSchedule(){
     fromSchedule:true
   });
 
-  // ถ้าเป็นคนใหม่ → สร้าง outreach visit อัตโนมัติ
+  // ถ้าเป็นคนใหม่ → สร้าง outreach visit อัตโนมัติและเชื่อมกับ schedule
   if(type==='new'&&personName){
-    // ดึงข้อมูลพื้นฐานของคนใหม่คนนั้น
+    // personId คือ docId ของ outreach record เดิม (จาก fillScheduleDropdowns)
+    // ดึงข้อมูลพื้นฐานจาก record นั้น
     let baseData={nick:personName,fname:'',job:'',contact:'',status:'กลาง'};
-    try{
-      const existing=await db.collection('outreach').where('mentor','==',currentMentor).get();
-      const match=existing.docs.map(d=>d.data()).find(d=>(d.nick||d.fname||'?')===personName);
-      if(match) baseData={...baseData,...match};
-    }catch(e){}
+    if(personId){
+      try{
+        const baseDoc=await db.collection('outreach').doc(personId).get();
+        if(baseDoc.exists) baseData={...baseData,...baseDoc.data()};
+      }catch(e){}
+    }
 
+    // สร้าง visit ใหม่ใน outreach (เป็นการบันทึกการเยี่ยมครั้งนี้)
     const orRef=await db.collection('outreach').add({
       mentor:currentMentor,
       nick:baseData.nick||personName,
@@ -1798,13 +1813,13 @@ async function saveSchedule(){
       contact:baseData.contact||'',
       status:baseData.status||'กลาง',
       dur:1,
-      note:note||(note?note:'นัดหมายจากตารางสัปดาห์'),
+      note:note||'นัดหมายจากตารางสัปดาห์',
       date:scheduleDay,
       ts:Date.now(),
-      fromScheduleId:schedRef.id, // link กลับไปยัง schedule
-      isScheduleVisit:true
+      isScheduleVisit:true,
+      linkedScheduleId:schedRef.id
     });
-    // อัปเดต schedule ให้รู้ว่ามี outreach record แล้ว
+    // อัปเดต schedule ให้รู้ linkedOrId → ใช้ตอนลบ
     await db.collection('schedules').doc(schedRef.id).update({linkedOrId:orRef.id});
   }
 
