@@ -856,6 +856,8 @@ async function initFirebase(){
   try{
     firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
+    // db พร้อมแล้ว — โหลด lambs ใน background ไม่บล็อก login
+    loadLambs().catch(e=>console.log('lambs bg:',e));
     const savedMentor=sessionStorage.getItem('ln_mentor');
     if(savedMentor){
       currentMentor=savedMentor;
@@ -873,15 +875,20 @@ async function initFirebase(){
       const targetPage2=document.getElementById(savedPage2);
       if(targetPage2)targetPage2.classList.add('active');
       if(navBtn2)navBtn2.classList.add('active');
-      // โหลด lambs + init หลัง Firebase พร้อม
-      loadLambs().then(()=>{
-        initApp();
-        const savedLamb2=sessionStorage.getItem('ln_lamb')||'';
-        if(savedPage2==='profile-page'){selectedLambId=savedLamb2||null;renderLambGrid();}
-        if(savedPage2==='outreach-page')renderOutreach();
-        if(savedPage2==='pastor-page')renderPastor();
-        if(savedPage2==='admin-page')renderAdmin();
-      }).catch(()=>initApp());
+      // รอ LAMBS โหลดเสร็จ (กำลังโหลด background อยู่)
+      var waitLambs = setInterval(()=>{
+        if(LAMBS.length || !db){
+          clearInterval(waitLambs);
+          initApp();
+          const savedLamb2=sessionStorage.getItem('ln_lamb')||'';
+          if(savedPage2==='profile-page'){selectedLambId=savedLamb2||null;renderLambGrid();}
+          if(savedPage2==='outreach-page')renderOutreach();
+          if(savedPage2==='pastor-page')renderPastor();
+          if(savedPage2==='admin-page')renderAdmin();
+        }
+      },200);
+      // timeout 5s
+      setTimeout(()=>{clearInterval(waitLambs);if(typeof initApp==='function')initApp();},5000);
     } else {
       // ไม่มี session — login page แสดงแล้ว, preload lambs ใน background
       loadLambs().catch(e=>console.log('lambs preload:',e));
@@ -1037,9 +1044,12 @@ async function doLogin(){
   }
   const isPastor=PASTOR_IDS.includes(name);
   btn.disabled=true;btn.textContent='กำลังโหลด...';
-  // ถ้า LAMBS ยังว่างอยู่ (โหลดไม่ทัน) ให้รอ แต่ timeout 3 วินาที
+  // รอ LAMBS ถ้ายังว่าง (max 3 วินาที)
   if(!LAMBS.length){
-    await Promise.race([loadLambs(), new Promise(r=>setTimeout(r,3000))]);
+    await Promise.race([
+      new Promise(r=>{var t=setInterval(()=>{if(LAMBS.length){clearInterval(t);r();}},100);}),
+      new Promise(r=>setTimeout(r,3000))
+    ]);
   }
   currentMentor=name;selectedLambId=null;
   // ล้าง session เก่าทั้งหมดก่อน เพื่อป้องกันหน้าค้าง
