@@ -875,7 +875,6 @@ async function initFirebase(){
   try{
     firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
-    // LAMBS ไม่ต้องโหลดจาก Firestore แล้ว — hardcode ไว้แล้ว
     // restore session ถ้ามี
     const savedMentor=sessionStorage.getItem('ln_mentor');
     if(savedMentor){
@@ -900,12 +899,10 @@ async function initFirebase(){
       if(savedPage2==='pastor-page')renderPastor();
       if(savedPage2==='admin-page')renderAdmin();
     }
-    // ถ้าไม่มี session — login page แสดงอยู่แล้ว พร้อมรับ login ทันที
-  }
-  // db พร้อมแล้ว: ถ้า login ไปแล้ว (doLogin ทำงานเร็วกว่า initFirebase) → render schedule
-  if(currentMentor && currentMentor!=='admin' && db){
-    setTimeout(()=>renderScheduleTable(), 100);
-  }
+    // db พร้อมแล้ว: ถ้า doLogin ทำงานเร็วกว่า initFirebase → render schedule
+    if(currentMentor && currentMentor!=='admin'){
+      setTimeout(()=>{ if(db) renderScheduleTable(); }, 100);
+    }
   }catch(e){
     console.error('initFirebase error:',e);
   }
@@ -1661,80 +1658,74 @@ async function adminDeleteLamb(id,name){
 // ── SCHEDULE ──
 let scheduleDay=null; // วันที่กำลังเพิ่มนัด
 
-async async function renderScheduleTable(){
+async function renderScheduleTable(){
   const days=getWeekDays();
   const now=new Date();
   const todayStr=now.toISOString().split('T')[0];
   const DAY_TH=['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
 
-  // label สัปดาห์
   const lbl=document.getElementById('schedule-week-label');
   if(lbl) lbl.textContent=`${formatDate(days[0])} — ${formatDate(days[6])}`;
-
-  // โหลดนัดหมาย — filter ใน JS เพื่อหลีกเลี่ยง composite index
-  let schedules=[];
-  try{
-    const snap=await db.collection('schedules').where('mentor','==',currentMentor).get();
-    schedules=snap.docs.map(d=>({...d.data(),docId:d.id}))
-      .filter(s=>s.date>=days[0]&&s.date<=days[6]);
-  }catch(e){console.error('schedule load:',e);}
-
-  // โหลดคนใหม่สำหรับ dropdown — ใช้ cache ถ้ามี
-  let outreachList=[];
-  if(outreachCache){
-    outreachList=outreachCache;
-  } else {
-    try{
-      const oSnap=await db.collection('outreach').where('mentor','==',currentMentor).get();
-      outreachList=oSnap.docs.map(d=>({...d.data(),docId:d.id}));
-      outreachCache=outreachList;
-    }catch(e){}
-  }
 
   const wrap=document.getElementById('schedule-table-wrap');
   if(!wrap)return;
 
-  // สร้าง HTML โดยไม่ใช้ nested template literal
-  let thead='<tr>';
-  days.forEach(function(d){
-    const dt=new Date(d+'T00:00:00');
+  // โหลด schedules จาก db (ถ้า db พร้อม)
+  let schedules=[];
+  let outreachList=[];
+  if(db){
+    try{
+      const snap=await db.collection('schedules')
+        .where('mentor','==',currentMentor).get();
+      schedules=snap.docs.map(d=>({...d.data(),docId:d.id}))
+        .filter(s=>days.includes(s.date));
+    }catch(e){ console.error('schedule load:',e); }
+    try{
+      const orSnap=await db.collection('outreach')
+        .where('mentor','==',currentMentor).get();
+      const seen={};
+      orSnap.docs.forEach(d=>{
+        const data=d.data();
+        const key=data.nick||data.fname||d.id;
+        if(!seen[key]){seen[key]=true;outreachList.push({id:d.id,name:key});}
+      });
+    }catch(e){ console.error('outreach load:',e); }
+  }
+
+  // สร้าง thead
+  let thead='<tr><th style="padding:4px 6px;font-size:12px;background:var(--surface2)">วัน</th>';
+  days.forEach(d=>{
+    const dow=new Date(d+'T00:00:00').getDay();
     const isToday=d===todayStr;
-    const bg=isToday?'var(--warm)':'var(--surface2)';
-    const fg=isToday?'white':'var(--text2)';
-    thead+='<th style="padding:7px 5px;text-align:center;background:'+bg+';color:'+fg+';border:1px solid var(--border);font-weight:600;min-width:100px">'
-      +'<div>'+DAY_TH[dt.getDay()]+'</div>'
-      +'<div style="font-size:10px;font-weight:400;opacity:0.85">'+formatDate(d)+'</div>'
-      +'</th>';
+    thead+=`<th style="padding:4px 6px;font-size:11px;background:${isToday?'var(--warm-light)':'var(--surface2)'};color:${isToday?'var(--warm)':'var(--text2)'};text-align:center">${DAY_TH[dow]}<br><span style="font-weight:400">${formatDate(d)}</span></th>`;
   });
   thead+='</tr>';
 
-  let tbody='<tr>';
-  days.forEach(function(d){
+  // สร้าง tbody — แถวเดียว 7 คอลัมน์
+  let cells='';
+  days.forEach(d=>{
     const isToday=d===todayStr;
-    const daySch=schedules.filter(function(s){return s.date===d;});
-    let cell='<td style="padding:6px 4px;vertical-align:top;border:1px solid var(--border);background:'+(isToday?'#fffbf5':'white')+';min-height:60px">';
-    daySch.forEach(function(s){
+    const daySch=schedules.filter(s=>s.date===d);
+    let cell=`<td style="padding:6px 4px;vertical-align:top;border:1px solid var(--border);background:${isToday?'#fffbf5':'white'};min-width:80px;position:relative">`;
+    daySch.forEach(s=>{
       const bg=s.type==='new'?'var(--green-bg)':'var(--blue-bg)';
       const fg=s.type==='new'?'var(--green)':'var(--blue)';
       const icon=s.type==='new'?'🌱':'🐑';
-      cell+='<div style="background:'+bg+';border-radius:8px;padding:4px 7px;margin-bottom:4px;position:relative">'
-        +'<div style="font-size:11px;font-weight:700;color:'+fg+'">'+icon+' '+(s.personName||'')+'</div>'
-        +(s.note?'<div style="font-size:10px;color:var(--text2)">'+s.note+'</div>':'')
-        +'<button onclick="deleteSchedule(''+s.docId+'')" style="position:absolute;top:2px;right:3px;background:none;border:none;cursor:pointer;font-size:10px;color:var(--text3)">✕</button>'
-        +'</div>';
+      const safeId=String(s.docId||'').replace(/"/g,'');
+      cell+=`<div style="background:${bg};border-radius:8px;padding:4px 7px;margin-bottom:4px;position:relative">`;
+      cell+=`<div style="font-size:11px;font-weight:700;color:${fg}">${icon} ${s.personName||''}</div>`;
+      if(s.note) cell+=`<div style="font-size:10px;color:var(--text2)">${s.note}</div>`;
+      cell+=`<button onclick="deleteSchedule('${safeId}')" style="position:absolute;top:2px;right:3px;background:none;border:none;cursor:pointer;font-size:10px;color:var(--text3)">✕</button>`;
+      cell+=`</div>`;
     });
-    cell+='<button onclick="openScheduleModal(''+d+'')" style="width:100%;padding:4px;border:1px dashed var(--border2);border-radius:6px;background:none;cursor:pointer;font-size:11px;color:var(--text3);margin-top:2px">+ นัด</button>';
-    cell+='</td>';
-    tbody+=cell;
+    const safeD=String(d||'').replace(/"/g,'');
+    cell+=`<button onclick="openScheduleModal('${safeD}')" style="width:100%;padding:4px;border:1px dashed var(--border2);border-radius:6px;background:none;cursor:pointer;font-size:11px;color:var(--text3);margin-top:2px">+ นัด</button>`;
+    cell+=`</td>`;
+    cells+=cell;
   });
-  tbody+='</tr>';
 
-  wrap.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:500px">'
-    +'<thead>'+thead+'</thead>'
-    +'<tbody>'+tbody+'</tbody>'
-    +'</table>';
+  wrap.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:500px"><thead>${thead}</thead><tbody><tr>${cells}</tr></tbody></table>`;
 
-  // fill dropdowns
   fillScheduleDropdowns(outreachList);
 }
 
@@ -1826,10 +1817,7 @@ async function deleteSchedule(docId){
     const schedData=schedDoc.exists?schedDoc.data():{};
     // ถ้าเป็นนัดคนใหม่และมี outreach visit เชื่อมอยู่
     if(schedData.type==='new'&&schedData.linkedOrId){
-      const delVisit=confirm('ลบนัดหมายนี้?
-
-✓ กด OK = ลบนัดหมายและประวัติการเยี่ยมเยียนด้วย
-✕ กด Cancel = ยกเลิก');
+      const delVisit=confirm('ลบนัดหมายนี้?\n\n✓ OK = ลบนัดและประวัติการเยี่ยมด้วย\n✕ Cancel = ยกเลิก');
       if(!delVisit)return;
       // ลบ outreach visit ด้วย
       await db.collection('outreach').doc(schedData.linkedOrId).delete();
