@@ -8,6 +8,29 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
+<script>
+// ── Early definitions สำหรับ login form (ต้องใช้ก่อน Firebase load) ──
+var MENTOR_GROUPS_EARLY = {
+  'ทีม':'Advance Pro','หมิว':'Advance Pro','สิงโต':'Startup Pro','คช.':'Startup Pro',
+  'แพรว':'Startup Pro','ทราย':'Startup Pro','แมนยู':'Startup Pro','โบ๊ต':'Startup Pro',
+  'เจ้าคุณ':'Startup Pro','ภูมิ':'Startup Pro','สิบ':'Protharam','กาเหว่า':'Protharam',
+  'ไผ่':'Protharam','แอม':'Protharam','เดียร์':'Protharam','เกด':'Protharam','ธีระ':'Pastor'
+};
+var PASTOR_IDS_EARLY = ['ธีระ'];
+function onNameInput(){
+  var name = document.getElementById('mentor-input').value.trim();
+  var needPwd = name==='admin' || Object.keys(MENTOR_GROUPS_EARLY).includes(name) || PASTOR_IDS_EARLY.includes(name);
+  var pwdLabel = document.getElementById('pwd-label');
+  var pwdInput = document.getElementById('pwd-input');
+  if(pwdLabel) pwdLabel.style.display = needPwd ? 'block' : 'none';
+  if(pwdInput) pwdInput.style.display = needPwd ? 'block' : 'none';
+  if(pwdLabel && needPwd) pwdLabel.textContent = name==='admin' ? 'รหัสผ่าน Admin' : 'รหัสผ่าน';
+}
+function focusPwd(){
+  var p = document.getElementById('pwd-input');
+  if(p && p.style.display !== 'none') p.focus();
+}
+</script>
 
 <!-- ═══════════════════════════════════════════════════════════════
      🔥 FIREBASE CONFIG — ใส่ค่าของคุณตรงนี้หลังสร้าง project
