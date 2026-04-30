@@ -779,8 +779,10 @@ async function initFirebase(){
   try{
     firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
-    // Test connection & load lambs
-    await loadLambs();
+    db.settings({cacheSizeBytes:firebase.firestore.CACHE_SIZE_UNLIMITED});
+    // โหลด lambs ก่อน แต่ไม่ block UI นาน
+    const lambPromise=loadLambs();
+    await lambPromise;
     // restore session หลัง refresh
     const savedMentor=sessionStorage.getItem('ln_mentor');
     if(savedMentor){
@@ -974,6 +976,8 @@ function logout(){
   sessionStorage.removeItem('ln_mentor');
   sessionStorage.removeItem('ln_page');
   sessionStorage.removeItem('ln_lamb');
+  outreachCache=null;
+  orPersonsCache=[];
   const pBtn=document.getElementById('pastor-nav-btn');
   if(pBtn)pBtn.style.display='none';
   document.getElementById('app').style.display='none';
@@ -1028,7 +1032,7 @@ function initApp(){
   fillLessonSets();
   fillAdminLessonSets();
   document.getElementById('lesson-row').style.display='flex';
-  renderScheduleTable();
+  if(currentMentor!=='admin') renderScheduleTable();
   if(currentMentor==='admin'){
     fillAdminMentorSelect();
     refreshAdminLambSelect();
@@ -1576,30 +1580,25 @@ async function renderScheduleTable(){
   const lbl=document.getElementById('schedule-week-label');
   if(lbl) lbl.textContent=`${formatDate(days[0])} — ${formatDate(days[6])}`;
 
-  // โหลดนัดหมายจาก Firestore
+  // โหลดนัดหมาย — filter ใน JS เพื่อหลีกเลี่ยง composite index
   let schedules=[];
   try{
-    const snap=await db.collection('schedules')
-      .where('mentor','==',currentMentor)
-      .where('date','>=',days[0])
-      .where('date','<=',days[6])
-      .get();
-    schedules=snap.docs.map(d=>({...d.data(),docId:d.id}));
-  }catch(e){
-    // fallback ถ้า index ยังไม่พร้อม
-    try{
-      const snap=await db.collection('schedules').where('mentor','==',currentMentor).get();
-      schedules=snap.docs.map(d=>({...d.data(),docId:d.id}))
-        .filter(s=>s.date>=days[0]&&s.date<=days[6]);
-    }catch(e2){console.error('schedule load:',e2);}
-  }
+    const snap=await db.collection('schedules').where('mentor','==',currentMentor).get();
+    schedules=snap.docs.map(d=>({...d.data(),docId:d.id}))
+      .filter(s=>s.date>=days[0]&&s.date<=days[6]);
+  }catch(e){console.error('schedule load:',e);}
 
-  // โหลดคนใหม่สำหรับ dropdown
+  // โหลดคนใหม่สำหรับ dropdown — ใช้ cache ถ้ามี
   let outreachList=[];
-  try{
-    const oSnap=await db.collection('outreach').where('mentor','==',currentMentor).get();
-    outreachList=oSnap.docs.map(d=>({...d.data(),docId:d.id}));
-  }catch(e){}
+  if(outreachCache){
+    outreachList=outreachCache;
+  } else {
+    try{
+      const oSnap=await db.collection('outreach').where('mentor','==',currentMentor).get();
+      outreachList=oSnap.docs.map(d=>({...d.data(),docId:d.id}));
+      outreachCache=outreachList;
+    }catch(e){}
+  }
 
   const wrap=document.getElementById('schedule-table-wrap');
   if(!wrap)return;
@@ -1782,11 +1781,13 @@ async function saveOutreach(){
 let selectedOrPerson=null; // docId ของคนใหม่ที่เลือก
 
 let orPersonsCache=[]; // เก็บ persons data ไว้ใน JS
+let outreachCache=null; // cache ข้อมูล outreach ทั้งหมด
 
 async function renderOutreach(){
   try{
     const snap=await db.collection('outreach').where('mentor','==',currentMentor).get();
     const docs=snap.docs.map(d=>({...d.data(),docId:d.id})).sort((a,b)=>(b.ts||0)-(a.ts||0));
+    outreachCache=docs; // อัปเดต cache
     document.getElementById('or-count').textContent=`(${docs.length} รายการ / `;
 
     if(!docs.length){
