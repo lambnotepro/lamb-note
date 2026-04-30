@@ -779,7 +779,6 @@ async function initFirebase(){
   try{
     firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
-    db.settings({cacheSizeBytes:firebase.firestore.CACHE_SIZE_UNLIMITED});
     // โหลด lambs ก่อน แต่ไม่ block UI นาน
     const lambPromise=loadLambs();
     await lambPromise;
