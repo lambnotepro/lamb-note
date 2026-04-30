@@ -1604,34 +1604,45 @@ async function renderScheduleTable(){
   const wrap=document.getElementById('schedule-table-wrap');
   if(!wrap)return;
 
-  wrap.innerHTML=`
-    <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:500px">
-      <thead><tr>
-        ${days.map(d=>{
-          const dt=new Date(d+'T00:00:00');
-          const isToday=d===todayStr;
-          return`<th style="padding:7px 5px;text-align:center;background:${isToday?'var(--warm)':'var(--surface2)'};color:${isToday?'white':'var(--text2)'};border:1px solid var(--border);font-weight:600;min-width:100px">
-            <div>${DAY_TH[dt.getDay()]}</div>
-            <div style="font-size:10px;font-weight:400;opacity:0.85">${formatDate(d)}</div>
-          </th>`;
-        }).join('')}
-      </tr></thead>
-      <tbody><tr>
-        ${days.map(d=>{
-          const isToday=d===todayStr;
-          const daySchedules=schedules.filter(s=>s.date===d);
-          return`<td style="padding:6px 4px;vertical-align:top;border:1px solid var(--border);background:${isToday?'#fffbf5':'white'};min-height:60px">
-            ${daySchedules.map(s=>`
-              <div style="background:${s.type==='new'?'var(--green-bg)':'var(--blue-bg)'};border-radius:8px;padding:4px 7px;margin-bottom:4px;position:relative">
-                <div style="font-size:11px;font-weight:700;color:${s.type==='new'?'var(--green)':'var(--blue)'}">${s.type==='new'?'🌱':'🐑'} ${s.personName||''}</div>
-                ${s.note?`<div style="font-size:10px;color:var(--text2)">${s.note}</div>`:''}
-                <button onclick="deleteSchedule('${s.docId}')" style="position:absolute;top:2px;right:3px;background:none;border:none;cursor:pointer;font-size:10px;color:var(--text3)">✕</button>
-              </div>`).join('')}
-            <button onclick="openScheduleModal('${d}')" style="width:100%;padding:4px;border:1px dashed var(--border2);border-radius:6px;background:none;cursor:pointer;font-size:11px;color:var(--text3);margin-top:2px">+ นัด</button>
-          </td>`;
-        }).join('')}
-      </tr></tbody>
-    </table>`;
+  // สร้าง HTML โดยไม่ใช้ nested template literal
+  let thead='<tr>';
+  days.forEach(function(d){
+    const dt=new Date(d+'T00:00:00');
+    const isToday=d===todayStr;
+    const bg=isToday?'var(--warm)':'var(--surface2)';
+    const fg=isToday?'white':'var(--text2)';
+    thead+='<th style="padding:7px 5px;text-align:center;background:'+bg+';color:'+fg+';border:1px solid var(--border);font-weight:600;min-width:100px">'
+      +'<div>'+DAY_TH[dt.getDay()]+'</div>'
+      +'<div style="font-size:10px;font-weight:400;opacity:0.85">'+formatDate(d)+'</div>'
+      +'</th>';
+  });
+  thead+='</tr>';
+
+  let tbody='<tr>';
+  days.forEach(function(d){
+    const isToday=d===todayStr;
+    const daySch=schedules.filter(function(s){return s.date===d;});
+    let cell='<td style="padding:6px 4px;vertical-align:top;border:1px solid var(--border);background:'+(isToday?'#fffbf5':'white')+';min-height:60px">';
+    daySch.forEach(function(s){
+      const bg=s.type==='new'?'var(--green-bg)':'var(--blue-bg)';
+      const fg=s.type==='new'?'var(--green)':'var(--blue)';
+      const icon=s.type==='new'?'🌱':'🐑';
+      cell+='<div style="background:'+bg+';border-radius:8px;padding:4px 7px;margin-bottom:4px;position:relative">'
+        +'<div style="font-size:11px;font-weight:700;color:'+fg+'">'+icon+' '+(s.personName||'')+'</div>'
+        +(s.note?'<div style="font-size:10px;color:var(--text2)">'+s.note+'</div>':'')
+        +'<button onclick="deleteSchedule(''+s.docId+'')" style="position:absolute;top:2px;right:3px;background:none;border:none;cursor:pointer;font-size:10px;color:var(--text3)">✕</button>'
+        +'</div>';
+    });
+    cell+='<button onclick="openScheduleModal(''+d+'')" style="width:100%;padding:4px;border:1px dashed var(--border2);border-radius:6px;background:none;cursor:pointer;font-size:11px;color:var(--text3);margin-top:2px">+ นัด</button>';
+    cell+='</td>';
+    tbody+=cell;
+  });
+  tbody+='</tr>';
+
+  wrap.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:500px">'
+    +'<thead>'+thead+'</thead>'
+    +'<tbody>'+tbody+'</tbody>'
+    +'</table>';
 
   // fill dropdowns
   fillScheduleDropdowns(outreachList);
@@ -1880,7 +1891,7 @@ function renderOrDetail(person){
     <td style="white-space:nowrap">${formatDate(v.date)}${v.isScheduleVisit?'<br><span style="font-size:10px;color:var(--blue);background:var(--blue-bg);padding:1px 5px;border-radius:8px">📅 จากนัด</span>':''}</td>
     <td>
       <select onchange="updateOrVisitStatus('${v.docId}',this.value)" style="padding:3px 6px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;font-family:inherit">
-        ${['เปิดใจ','กลาง','ยังไม่พร้อม','ผู้เชื่อแล้ว'].map(s=>`<option value="${s}" ${v.status===s?'selected':''}>${s}</option>`).join('')}
+        ${buildStatusOptions(v.status)}
       </select>
     </td>
     <td>
@@ -1889,7 +1900,7 @@ function renderOrDetail(person){
         style="width:55px;padding:3px 5px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;text-align:center">
     </td>
     <td>
-      <input type="text" value="${(v.note||'').replace(/"/g,'&quot;')}"
+      <input type="text" value="${escapeAttr(v.note||'')}" 
         onchange="updateOrVisitNote('${v.docId}',this.value)"
         style="width:100%;padding:3px 6px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;font-family:inherit"
         placeholder="โน้ต...">
@@ -1941,6 +1952,12 @@ function selectOrPersonFromTable(idx){
   if(firstStab) showOrStab('or-visits',firstStab);
 }
 
+function escapeAttr(s){return(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function buildStatusOptions(current){
+  return ['เปิดใจ','กลาง','ยังไม่พร้อม','ผู้เชื่อแล้ว']
+    .map(s=>'<option value="'+s+'"'+(current===s?' selected':'')+'>'+s+'</option>')
+    .join('');
+}
 async function updateOrVisitStatus(docId,val){
   await db.collection('outreach').doc(docId).update({status:val});
   showToast('✓ อัปเดตสถานะแล้ว');
