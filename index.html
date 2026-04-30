@@ -779,37 +779,34 @@ async function initFirebase(){
   try{
     firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
-    // แสดง login/app ทันที ไม่รอ Firebase
     const savedMentor=sessionStorage.getItem('ln_mentor');
-    document.getElementById('loading-overlay').style.display='none';
     if(savedMentor){
       currentMentor=savedMentor;
       const isAdminUser=savedMentor==='admin';
       const isPastorUser=PASTOR_IDS.includes(savedMentor);
       setupNavForUser(savedMentor);
-      document.getElementById('app').style.display='flex';
-      // โหลด lambs แบบ background
-      loadLambs().then(()=>initApp()).catch(()=>initApp());
-      // restore หน้าที่อยู่ก่อน refresh
-      let savedPage=sessionStorage.getItem('ln_page')||'log-page';
-      const savedLamb=sessionStorage.getItem('ln_lamb')||'';
-      // ป้องกัน role ผิด
-      if(savedPage==='admin-page'&&!isAdminUser) savedPage='log-page';
-      if(savedPage==='pastor-page'&&!isPastorUser) savedPage='log-page';
-      const navMap={'log-page':'nav-log','profile-page':'nav-profile','outreach-page':'nav-outreach','pastor-page':'pastor-nav-btn','admin-page':'admin-nav-btn'};
-      const navBtn=document.getElementById(navMap[savedPage]||'nav-log');
+      // restore หน้า (ทำทันที ก่อน Firebase)
+      let savedPage2=sessionStorage.getItem('ln_page')||'log-page';
+      if(savedPage2==='admin-page'&&!isAdminUser) savedPage2='log-page';
+      if(savedPage2==='pastor-page'&&!isPastorUser) savedPage2='log-page';
+      const navMap2={'log-page':'nav-log','profile-page':'nav-profile','outreach-page':'nav-outreach','pastor-page':'pastor-nav-btn','admin-page':'admin-nav-btn'};
+      const navBtn2=document.getElementById(navMap2[savedPage2]||'nav-log');
       document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
       document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-      const targetPage=document.getElementById(savedPage);
-      if(targetPage)targetPage.classList.add('active');
-      if(navBtn)navBtn.classList.add('active');
-      if(savedPage==='profile-page'){selectedLambId=savedLamb||null;renderLambGrid();}
-      if(savedPage==='outreach-page')renderOutreach();
-      if(savedPage==='pastor-page')renderPastor();
-      if(savedPage==='admin-page')renderAdmin();
+      const targetPage2=document.getElementById(savedPage2);
+      if(targetPage2)targetPage2.classList.add('active');
+      if(navBtn2)navBtn2.classList.add('active');
+      // โหลด lambs + init หลัง Firebase พร้อม
+      loadLambs().then(()=>{
+        initApp();
+        const savedLamb2=sessionStorage.getItem('ln_lamb')||'';
+        if(savedPage2==='profile-page'){selectedLambId=savedLamb2||null;renderLambGrid();}
+        if(savedPage2==='outreach-page')renderOutreach();
+        if(savedPage2==='pastor-page')renderPastor();
+        if(savedPage2==='admin-page')renderAdmin();
+      }).catch(()=>initApp());
     } else {
-      document.getElementById('login-page').style.display='flex';
-      // โหลด lambs แบบ background สำหรับตอน login
+      // ไม่มี session — login page แสดงแล้ว, preload lambs ใน background
       loadLambs().catch(e=>console.log('lambs preload:',e));
     }
   }catch(e){
@@ -2232,7 +2229,19 @@ function formatDate(d){
   try{return new Date(d+'T00:00:00').toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'});}catch(e){return d;}
 }
 
-// ── BOOT
+// ── BOOT — แสดง UI ทันที ไม่รอ Firebase
+(function(){
+  const savedMentor = sessionStorage.getItem('ln_mentor');
+  document.getElementById('loading-overlay').style.display = 'none';
+  if(savedMentor){
+    // มี session → แสดง app ก่อน
+    document.getElementById('app').style.display = 'flex';
+  } else {
+    // ไม่มี session → แสดง login ก่อน
+    document.getElementById('login-page').style.display = 'flex';
+  }
+})();
+// โหลด Firebase ใน background
 initFirebase();
 </script>
 
