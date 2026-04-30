@@ -779,19 +779,17 @@ async function initFirebase(){
   try{
     firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
-    // โหลด lambs ก่อน แต่ไม่ block UI นาน
-    const lambPromise=loadLambs();
-    await lambPromise;
-    // restore session หลัง refresh
+    // แสดง login/app ทันที ไม่รอ Firebase
     const savedMentor=sessionStorage.getItem('ln_mentor');
+    document.getElementById('loading-overlay').style.display='none';
     if(savedMentor){
       currentMentor=savedMentor;
       const isAdminUser=savedMentor==='admin';
       const isPastorUser=PASTOR_IDS.includes(savedMentor);
       setupNavForUser(savedMentor);
-      document.getElementById('loading-overlay').style.display='none';
       document.getElementById('app').style.display='flex';
-      initApp();
+      // โหลด lambs แบบ background
+      loadLambs().then(()=>initApp()).catch(()=>initApp());
       // restore หน้าที่อยู่ก่อน refresh
       let savedPage=sessionStorage.getItem('ln_page')||'log-page';
       const savedLamb=sessionStorage.getItem('ln_lamb')||'';
@@ -810,8 +808,9 @@ async function initFirebase(){
       if(savedPage==='pastor-page')renderPastor();
       if(savedPage==='admin-page')renderAdmin();
     } else {
-      document.getElementById('loading-overlay').style.display='none';
       document.getElementById('login-page').style.display='flex';
+      // โหลด lambs แบบ background สำหรับตอน login
+      loadLambs().catch(e=>console.log('lambs preload:',e));
     }
   }catch(e){
     document.getElementById('loading-msg').textContent='❌ เชื่อมต่อ Firebase ไม่ได้ — ตรวจสอบ config อีกครั้ง';
@@ -823,14 +822,18 @@ async function initFirebase(){
 //  FIRESTORE HELPERS
 // ══════════════════════════════════════════════════════
 async function loadLambs(){
-  const snap = await db.collection('lambs').orderBy('id').get();
-  if(snap.empty){
-    // First run — seed default lambs
-    await seedDefaultLambs();
-    const snap2 = await db.collection('lambs').orderBy('id').get();
-    LAMBS = snap2.docs.map(d=>d.data());
-  } else {
-    LAMBS = snap.docs.map(d=>d.data());
+  try{
+    // ไม่ใช้ orderBy เพื่อหลีกเลี่ยงการต้องการ Firestore index
+    const snap = await db.collection('lambs').get();
+    if(snap.empty){
+      await seedDefaultLambs();
+      const snap2 = await db.collection('lambs').get();
+      LAMBS = snap2.docs.map(d=>d.data()).sort((a,b)=>a.id.localeCompare(b.id));
+    } else {
+      LAMBS = snap.docs.map(d=>d.data()).sort((a,b)=>a.id.localeCompare(b.id));
+    }
+  }catch(e){
+    console.error('loadLambs:',e);
   }
 }
 async function seedDefaultLambs(){
@@ -957,7 +960,10 @@ async function doLogin(){
   }
   const isPastor=PASTOR_IDS.includes(name);
   btn.disabled=true;btn.textContent='กำลังโหลด...';
-  await loadLambs();
+  // ถ้า LAMBS ยังว่างอยู่ (โหลดไม่ทัน) ให้รอ แต่ timeout 3 วินาที
+  if(!LAMBS.length){
+    await Promise.race([loadLambs(), new Promise(r=>setTimeout(r,3000))]);
+  }
   currentMentor=name;selectedLambId=null;
   // ล้าง session เก่าทั้งหมดก่อน เพื่อป้องกันหน้าค้าง
   sessionStorage.removeItem('ln_page');
