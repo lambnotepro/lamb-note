@@ -500,7 +500,7 @@ tbody td{padding:8px 10px;vertical-align:top}
       <div class="card-title">📋 ประวัติการเยี่ยมเยียน</div>
       <div class="tbl-wrap">
         <table><thead><tr>
-          <th>วันที่</th><th>สถานะ</th><th>เวลา(ชม.)</th><th>โน้ต</th><th></th>
+          <th>วันที่</th><th>สถานะ</th><th>ชม.</th><th>โน้ต</th><th></th>
         </tr></thead>
         <tbody id="or-visit-tbody"></tbody></table>
       </div>
@@ -1676,18 +1676,68 @@ async function saveSchedule(){
     personName=sel.options[sel.selectedIndex]?.dataset?.name||sel.options[sel.selectedIndex]?.text||'';
   } else {
     const sel=document.getElementById('sch-new-sel');
-    personId=sel.value;
+    personId=sel.value; // docId ของ outreach record ล่าสุด
     personName=sel.options[sel.selectedIndex]?.dataset?.name||sel.options[sel.selectedIndex]?.text||'';
   }
-  if(!personId&&type==='new')return;
+  if(!personName)return;
   const note=document.getElementById('sch-note').value.trim();
-  await db.collection('schedules').add({
-    mentor:currentMentor,date:scheduleDay,type,personId,personName,note,ts:Date.now()
+
+  // บันทึกนัดหมาย
+  const schedRef=await db.collection('schedules').add({
+    mentor:currentMentor,date:scheduleDay,type,personId,personName,note,ts:Date.now(),
+    fromSchedule:true
   });
+
+  // ถ้าเป็นคนใหม่ → สร้าง outreach visit อัตโนมัติ
+  if(type==='new'&&personName){
+    // ดึงข้อมูลพื้นฐานของคนใหม่คนนั้น
+    let baseData={nick:personName,fname:'',job:'',contact:'',status:'กลาง'};
+    try{
+      const existing=await db.collection('outreach').where('mentor','==',currentMentor).get();
+      const match=existing.docs.map(d=>d.data()).find(d=>(d.nick||d.fname||'?')===personName);
+      if(match) baseData={...baseData,...match};
+    }catch(e){}
+
+    const orRef=await db.collection('outreach').add({
+      mentor:currentMentor,
+      nick:baseData.nick||personName,
+      fname:baseData.fname||'',
+      job:baseData.job||'',
+      contact:baseData.contact||'',
+      status:baseData.status||'กลาง',
+      dur:1,
+      note:note||(note?note:'นัดหมายจากตารางสัปดาห์'),
+      date:scheduleDay,
+      ts:Date.now(),
+      fromScheduleId:schedRef.id, // link กลับไปยัง schedule
+      isScheduleVisit:true
+    });
+    // อัปเดต schedule ให้รู้ว่ามี outreach record แล้ว
+    await db.collection('schedules').doc(schedRef.id).update({linkedOrId:orRef.id});
+  }
+
   closeScheduleModal();
   await renderScheduleTable();
 }
 async function deleteSchedule(docId){
+  try{
+    const schedDoc=await db.collection('schedules').doc(docId).get();
+    const schedData=schedDoc.exists?schedDoc.data():{};
+    // ถ้าเป็นนัดคนใหม่และมี outreach visit เชื่อมอยู่
+    if(schedData.type==='new'&&schedData.linkedOrId){
+      const delVisit=confirm('ลบนัดหมายนี้?
+
+✓ กด OK = ลบนัดหมายและประวัติการเยี่ยมเยียนด้วย
+✕ กด Cancel = ยกเลิก');
+      if(!delVisit)return;
+      // ลบ outreach visit ด้วย
+      await db.collection('outreach').doc(schedData.linkedOrId).delete();
+    } else {
+      if(!confirm('ลบนัดหมายนี้?'))return;
+    }
+  }catch(e){
+    if(!confirm('ลบนัดหมายนี้?'))return;
+  }
   await db.collection('schedules').doc(docId).delete();
   await renderScheduleTable();
 }
@@ -1827,10 +1877,23 @@ function renderOrDetail(person){
   if(!person.visits.length){tbody.innerHTML='';document.getElementById('or-visit-empty').style.display='block';return;}
   document.getElementById('or-visit-empty').style.display='none';
   tbody.innerHTML=person.visits.map(v=>`<tr>
-    <td>${formatDate(v.date)}</td>
-    <td><span class="badge ${statusColor[v.status]||'badge-warm'}">${v.status}</span></td>
-    <td>${v.dur}</td>
-    <td style="font-size:12px;max-width:200px">${v.note||'—'}</td>
+    <td style="white-space:nowrap">${formatDate(v.date)}${v.isScheduleVisit?'<br><span style="font-size:10px;color:var(--blue);background:var(--blue-bg);padding:1px 5px;border-radius:8px">📅 จากนัด</span>':''}</td>
+    <td>
+      <select onchange="updateOrVisitStatus('${v.docId}',this.value)" style="padding:3px 6px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;font-family:inherit">
+        ${['เปิดใจ','กลาง','ยังไม่พร้อม','ผู้เชื่อแล้ว'].map(s=>`<option value="${s}" ${v.status===s?'selected':''}>${s}</option>`).join('')}
+      </select>
+    </td>
+    <td>
+      <input type="number" value="${v.dur||1}" min="0.5" step="0.5"
+        onchange="updateOrVisitDur('${v.docId}',this.value)"
+        style="width:55px;padding:3px 5px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;text-align:center">
+    </td>
+    <td>
+      <input type="text" value="${(v.note||'').replace(/"/g,'&quot;')}"
+        onchange="updateOrVisitNote('${v.docId}',this.value)"
+        style="width:100%;padding:3px 6px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;font-family:inherit"
+        placeholder="โน้ต...">
+    </td>
     <td><button class="btn btn-danger btn-sm" onclick="deleteOutreach('${v.docId}')">ลบ</button></td>
   </tr>`).join('');
   // โน้ตรายคน
@@ -1876,6 +1939,32 @@ function selectOrPersonFromTable(idx){
   document.getElementById('or-detail').scrollIntoView({behavior:'smooth'});
   const firstStab=document.querySelector('#outreach-page .stab');
   if(firstStab) showOrStab('or-visits',firstStab);
+}
+
+async function updateOrVisitStatus(docId,val){
+  await db.collection('outreach').doc(docId).update({status:val});
+  showToast('✓ อัปเดตสถานะแล้ว');
+  // refresh detail
+  if(selectedOrPerson!==null&&orPersonsCache[selectedOrPerson]){
+    // อัปเดต cache ด้วย
+    orPersonsCache[selectedOrPerson].visits.forEach(v=>{if(v.docId===docId)v.status=val;});
+    renderOrDetail(orPersonsCache[selectedOrPerson]);
+  }
+}
+async function updateOrVisitDur(docId,val){
+  const dur=parseFloat(val)||1;
+  await db.collection('outreach').doc(docId).update({dur});
+  if(selectedOrPerson!==null&&orPersonsCache[selectedOrPerson]){
+    orPersonsCache[selectedOrPerson].visits.forEach(v=>{if(v.docId===docId)v.dur=dur;});
+  }
+  showToast('✓ อัปเดตเวลาแล้ว');
+}
+async function updateOrVisitNote(docId,val){
+  await db.collection('outreach').doc(docId).update({note:val});
+  if(selectedOrPerson!==null&&orPersonsCache[selectedOrPerson]){
+    orPersonsCache[selectedOrPerson].visits.forEach(v=>{if(v.docId===docId)v.note=val;});
+  }
+  showToast('✓ อัปเดตโน้ตแล้ว');
 }
 
 async function loadOrPersonNote(){
