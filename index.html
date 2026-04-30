@@ -855,8 +855,8 @@ async function initFirebase(){
   try{
     firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
-    // db พร้อมแล้ว — โหลด lambs ใน background ไม่บล็อก login
-    loadLambs().catch(e=>console.log('lambs bg:',e));
+    // db พร้อมแล้ว — เริ่มโหลด lambs ทันที (background)
+    loadLambs(); // fire & forget — dedup ด้วย _lambsPromise
     const savedMentor=sessionStorage.getItem('ln_mentor');
     if(savedMentor){
       currentMentor=savedMentor;
@@ -889,8 +889,8 @@ async function initFirebase(){
       // timeout 5s
       setTimeout(()=>{clearInterval(waitLambs);if(typeof initApp==='function')initApp();},5000);
     } else {
-      // ไม่มี session — login page แสดงแล้ว, preload lambs ใน background
-      loadLambs().catch(e=>console.log('lambs preload:',e));
+      // ไม่มี session — login page แสดงแล้ว
+      // loadLambs() เรียกแล้วข้างบน ไม่ต้องเรียกซ้ำ
     }
   }catch(e){
     document.getElementById('loading-msg').textContent='❌ เชื่อมต่อ Firebase ไม่ได้ — ตรวจสอบ config อีกครั้ง';
@@ -901,20 +901,26 @@ async function initFirebase(){
 // ══════════════════════════════════════════════════════
 //  FIRESTORE HELPERS
 // ══════════════════════════════════════════════════════
+let _lambsPromise = null; // dedup — ไม่ให้โหลดซ้ำ
 async function loadLambs(){
-  try{
-    // ไม่ใช้ orderBy เพื่อหลีกเลี่ยงการต้องการ Firestore index
-    const snap = await db.collection('lambs').get();
-    if(snap.empty){
-      await seedDefaultLambs();
-      const snap2 = await db.collection('lambs').get();
-      LAMBS = snap2.docs.map(d=>d.data()).sort((a,b)=>a.id.localeCompare(b.id));
-    } else {
-      LAMBS = snap.docs.map(d=>d.data()).sort((a,b)=>a.id.localeCompare(b.id));
+  // ถ้ากำลังโหลดอยู่แล้ว รอ promise เดิมแทน
+  if(_lambsPromise) return _lambsPromise;
+  _lambsPromise = (async()=>{
+    try{
+      const snap = await db.collection('lambs').get();
+      if(snap.empty){
+        await seedDefaultLambs();
+        const snap2 = await db.collection('lambs').get();
+        LAMBS = snap2.docs.map(d=>d.data()).sort((a,b)=>a.id.localeCompare(b.id));
+      } else {
+        LAMBS = snap.docs.map(d=>d.data()).sort((a,b)=>a.id.localeCompare(b.id));
+      }
+    }catch(e){
+      console.error('loadLambs:',e);
+      _lambsPromise = null; // reset ถ้า error เพื่อให้ retry ได้
     }
-  }catch(e){
-    console.error('loadLambs:',e);
-  }
+  })();
+  return _lambsPromise;
 }
 async function seedDefaultLambs(){
   const defaults=[
@@ -1054,9 +1060,12 @@ async function doLogin(){
     err.textContent='Firebase ไม่พร้อม กรุณารีเฟรชหน้า';
     err.style.display='block'; btn.disabled=false; btn.textContent='เข้าสู่ระบบ'; return;
   }
-  // โหลด LAMBS ถ้ายังว่าง
+  // รอ LAMBS โหลดเสร็จ (ใช้ promise เดิมที่ initFirebase เริ่มไว้แล้ว)
   if(!LAMBS.length){
-    await Promise.race([loadLambs(), new Promise(r=>setTimeout(r,4000))]);
+    await Promise.race([
+      _lambsPromise || loadLambs(),
+      new Promise(r=>setTimeout(r,5000))
+    ]);
   }
   currentMentor=name;selectedLambId=null;
   // ล้าง session เก่าทั้งหมดก่อน เพื่อป้องกันหน้าค้าง
