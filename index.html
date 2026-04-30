@@ -55,13 +55,13 @@ window._checkFbReady = function(){
   window._fbSdkReady = (window._fbAppReady && window._fbFsReady);
 };
 function tryLogin(){
-  // ขั้น 1: ตรวจรหัสผ่านทันที ไม่รอ Firebase
   var name = document.getElementById('mentor-input').value.trim();
   var pwd = document.getElementById('pwd-input').value;
   var err = document.getElementById('login-err');
+  var btn = document.getElementById('login-btn');
   err.style.display='none';
   if(!name){ err.textContent='กรุณาพิมพ์ชื่อ'; err.style.display='block'; return; }
-  // ตรวจรหัสผ่านจาก MENTOR_PASSWORDS_EARLY
+  // ตรวจรหัสจาก early data ก่อน (ไม่รอ Firebase)
   if(name==='admin'){
     if(pwd!=='kc0460'){ err.textContent='รหัสผ่าน Admin ไม่ถูกต้อง'; err.style.display='block'; return; }
   } else if(!Object.keys(MENTOR_GROUPS_EARLY).includes(name)){
@@ -70,25 +70,24 @@ function tryLogin(){
     var expected = MENTOR_PASSWORDS_EARLY[name]||'';
     if(expected && pwd!==expected){ err.textContent='รหัสผ่านไม่ถูกต้อง'; err.style.display='block'; return; }
   }
-  // ขั้น 2: รหัสถูก → รอ Firebase แล้วเข้า app
-  var btn = document.getElementById('login-btn');
-  if(typeof db !== 'undefined' && db){
-    if(typeof doLogin==='function') doLogin(); return;
+  // รหัสถูก — เรียก doLogin ทันที (doLogin จะรอ LAMBS เอง)
+  if(typeof doLogin==='function'){
+    doLogin();
+  } else {
+    btn.disabled=true; btn.textContent='กำลังโหลด...';
+    var t=setInterval(function(){
+      if(typeof doLogin==='function'){
+        clearInterval(t);
+        btn.disabled=false; btn.textContent='เข้าสู่ระบบ';
+        doLogin();
+      }
+    },100);
+    setTimeout(function(){
+      clearInterval(t);
+      btn.disabled=false; btn.textContent='เข้าสู่ระบบ';
+      err.textContent='โหลดช้า กรุณารีเฟรช'; err.style.display='block';
+    },8000);
   }
-  if(btn){ btn.disabled=true; btn.textContent='กำลังโหลด...'; }
-  var attempts=0;
-  var wait=setInterval(function(){
-    attempts++;
-    if(typeof db !== 'undefined' && db){
-      clearInterval(wait);
-      if(btn){ btn.disabled=false; btn.textContent='เข้าสู่ระบบ'; }
-      if(typeof doLogin==='function') doLogin();
-    } else if(attempts>30){
-      clearInterval(wait);
-      if(btn){ btn.disabled=false; btn.textContent='เข้าสู่ระบบ'; }
-      err.textContent='Firebase โหลดช้า — ลองรีเฟรชหน้า'; err.style.display='block';
-    }
-  },300);
 }
 </script>
 
@@ -1044,12 +1043,20 @@ async function doLogin(){
   }
   const isPastor=PASTOR_IDS.includes(name);
   btn.disabled=true;btn.textContent='กำลังโหลด...';
-  // รอ LAMBS ถ้ายังว่าง (max 3 วินาที)
-  if(!LAMBS.length){
+  // รอ db พร้อมก่อน (max 5 วินาที)
+  if(!db){
     await Promise.race([
-      new Promise(r=>{var t=setInterval(()=>{if(LAMBS.length){clearInterval(t);r();}},100);}),
-      new Promise(r=>setTimeout(r,3000))
+      new Promise(r=>{var t=setInterval(()=>{if(db){clearInterval(t);r();}},100);}),
+      new Promise(r=>setTimeout(r,5000))
     ]);
+  }
+  if(!db){ 
+    err.textContent='Firebase ไม่พร้อม กรุณารีเฟรชหน้า';
+    err.style.display='block'; btn.disabled=false; btn.textContent='เข้าสู่ระบบ'; return;
+  }
+  // โหลด LAMBS ถ้ายังว่าง
+  if(!LAMBS.length){
+    await Promise.race([loadLambs(), new Promise(r=>setTimeout(r,4000))]);
   }
   currentMentor=name;selectedLambId=null;
   // ล้าง session เก่าทั้งหมดก่อน เพื่อป้องกันหน้าค้าง
