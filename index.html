@@ -931,10 +931,13 @@ const pwdInput=()=>document.getElementById('pwd-input');
 
 function onNameInput(){
   const name=document.getElementById('mentor-input').value.trim();
-  const needPwd=name==='admin'||DEFAULT_MENTORS.includes(name);
-  document.getElementById('pwd-label').style.display=needPwd?'block':'none';
-  document.getElementById('pwd-input').style.display=needPwd?'block':'none';
-  if(needPwd)document.getElementById('pwd-label').textContent=name==='admin'?'รหัสผ่าน Admin':'รหัสผ่าน';
+  // ตรวจสอบจาก MENTOR_GROUPS โดยตรง ไม่ต้องรอ Firebase
+  const needPwd=name==='admin'||Object.keys(MENTOR_GROUPS).includes(name)||PASTOR_IDS.includes(name);
+  const pwdLabel=document.getElementById('pwd-label');
+  const pwdInput=document.getElementById('pwd-input');
+  if(pwdLabel)pwdLabel.style.display=needPwd?'block':'none';
+  if(pwdInput)pwdInput.style.display=needPwd?'block':'none';
+  if(pwdLabel&&needPwd)pwdLabel.textContent=name==='admin'?'รหัสผ่าน Admin':'รหัสผ่าน';
 }
 function focusPwd(){
   const p=document.getElementById('pwd-input');
