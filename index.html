@@ -8,6 +8,10 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
+<!-- Firebase SDK โหลดแบบ defer ไม่บล็อก UI -->
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" onload="window._fbAppReady=true;window._checkFbReady&&window._checkFbReady()"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" onload="window._fbFsReady=true;window._checkFbReady&&window._checkFbReady()"></script>
+
 <script>
 // ── Early definitions สำหรับ login form (ต้องใช้ก่อน Firebase load) ──
 var MENTOR_GROUPS_EARLY = {
@@ -29,6 +33,48 @@ function onNameInput(){
 function focusPwd(){
   var p = document.getElementById('pwd-input');
   if(p && p.style.display !== 'none') p.focus();
+  else tryLogin();
+}
+// BUG2 fix: clear รหัสเมื่อเปลี่ยนชื่อ
+var _prevName = '';
+var _origOnNameInput = onNameInput;
+onNameInput = function(){
+  var name = document.getElementById('mentor-input').value.trim();
+  if(name !== _prevName){
+    var pwdInput = document.getElementById('pwd-input');
+    if(pwdInput) pwdInput.value = '';
+    _prevName = name;
+  }
+  _origOnNameInput();
+};
+// doLogin wrapper — รอ Firebase พร้อมแล้วค่อยเรียก
+window._checkFbReady = function(){
+  if(window._fbAppReady && window._fbFsReady && !window._fbInited){
+    window._fbInited = true;
+    if(typeof initFirebase === 'function') initFirebase();
+  }
+};
+function tryLogin(){
+  var btn = document.getElementById('login-btn');
+  if(typeof doLogin === 'function' && typeof db !== 'undefined' && db){
+    doLogin();
+    return;
+  }
+  if(btn){ btn.disabled=true; btn.textContent='กำลังเชื่อมต่อ...'; }
+  var attempts = 0;
+  var wait = setInterval(function(){
+    attempts++;
+    if(typeof doLogin === 'function' && typeof db !== 'undefined' && db){
+      clearInterval(wait);
+      if(btn){ btn.disabled=false; btn.textContent='เข้าสู่ระบบ'; }
+      doLogin();
+    } else if(attempts > 20){
+      clearInterval(wait);
+      if(btn){ btn.disabled=false; btn.textContent='เข้าสู่ระบบ'; }
+      var err = document.getElementById('login-err');
+      if(err){ err.style.display='block'; err.textContent='การเชื่อมต่อช้า — ลองรีเฟรชหน้าอีกครั้ง'; }
+    }
+  }, 300);
 }
 </script>
 
@@ -85,12 +131,6 @@ const MENTOR_PASSWORDS = {
   'ธีระ':      'teerahope',
 };
 </script>
-
-<!-- Firebase SDK -->
-
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -236,7 +276,7 @@ tbody td{padding:8px 10px;vertical-align:top}
     <input class="login-input" id="mentor-input" type="text" placeholder="เช่น ทีม, หมิว, สิงโต ..." autocomplete="off" onkeydown="if(event.key==='Enter')focusPwd()" oninput="onNameInput()">
     <label class="login-label" id="pwd-label" style="display:none">รหัสผ่าน</label>
     <input class="login-input" id="pwd-input" type="password" placeholder="รหัสผ่าน" style="display:none" onkeydown="if(event.key==='Enter')doLogin()">
-    <button class="btn-login" id="login-btn" onclick="doLogin()">เข้าสู่ระบบ</button>
+    <button class="btn-login" id="login-btn" onclick="tryLogin()">เข้าสู่ระบบ</button>
     <div class="login-err" id="login-err"></div>
     <div class="login-hint">พิมพ์ "admin" แล้วใส่รหัสผ่านสำหรับ Admin</div>
   </div>
@@ -2265,7 +2305,11 @@ function formatDate(d){
     document.getElementById('app').style.display = 'flex';
   }
 })();
-initFirebase();
+// initFirebase จะถูกเรียกโดย _checkFbReady หลัง SDK โหลด
+// ถ้า SDK โหลดแล้ว (cached) ให้เรียกเลย
+if(window._fbAppReady && window._fbFsReady){
+  initFirebase();
+}
 </script>
 
 </body>
