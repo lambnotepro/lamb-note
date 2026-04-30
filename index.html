@@ -450,19 +450,57 @@ tbody td{padding:8px 10px;vertical-align:top}
     <button class="btn btn-primary" id="or-save-btn" onclick="saveOutreach()">+ บันทึก</button>
   </div>
 
-  <!-- รายการคนใหม่ของตัวเอง -->
+  <!-- ปุ่มรายชื่อคนใหม่ -->
   <div class="card">
     <div class="card-title" style="justify-content:space-between">
-      <span>📋 รายชื่อคนใหม่ที่เยี่ยมเยียน</span>
+      <span>👥 รายชื่อคนใหม่ที่เยี่ยมเยียน</span>
       <span id="or-count" style="font-size:12px;color:var(--text2);font-weight:400"></span>
     </div>
-    <div class="tbl-wrap">
-      <table><thead><tr>
-        <th>วันที่</th><th>ชื่อเล่น / ชื่อ</th><th>อาชีพ</th><th>รู้จักผ่าน</th><th>สถานะ</th><th>เวลา</th><th>โน้ต</th><th></th>
-      </tr></thead>
-      <tbody id="or-tbody"></tbody></table>
+    <div class="lamb-grid" id="or-person-grid"></div>
+    <div class="empty" id="or-empty">ยังไม่มีบันทึก — เพิ่มด้านบนได้เลย</div>
+  </div>
+
+  <!-- detail panel รายคน -->
+  <div id="or-detail" style="display:none">
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <div style="font-size:32px">🌱</div>
+        <div style="flex:1">
+          <div style="font-size:19px;font-weight:700;color:var(--warm)" id="or-detail-name"></div>
+          <div style="font-size:12px;color:var(--text2)" id="or-detail-meta"></div>
+        </div>
+        <span id="or-detail-status-badge"></span>
+      </div>
+      <!-- ข้อมูลพื้นฐาน -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px" id="or-detail-info"></div>
+      <!-- สรุปเวลา -->
+      <div class="stat-grid" id="or-detail-stats"></div>
     </div>
-    <div class="empty" id="or-empty">ยังไม่มีบันทึก</div>
+
+    <!-- แท็บ -->
+    <div class="stabs" style="margin-top:0">
+      <button class="stab active" onclick="showOrStab('or-visits',this)">📋 ประวัติการเยี่ยมเยียน</button>
+      <button class="stab" onclick="showOrStab('or-person-notes',this)">📝 โน้ตรายคน</button>
+    </div>
+
+    <!-- ประวัติการเยี่ยม -->
+    <div class="card" id="or-visits">
+      <div class="card-title">📋 ประวัติการเยี่ยมเยียน</div>
+      <div class="tbl-wrap">
+        <table><thead><tr>
+          <th>วันที่</th><th>สถานะ</th><th>เวลา(ชม.)</th><th>โน้ต</th><th></th>
+        </tr></thead>
+        <tbody id="or-visit-tbody"></tbody></table>
+      </div>
+      <div class="empty" id="or-visit-empty" style="display:none">ยังไม่มีบันทึก</div>
+    </div>
+
+    <!-- โน้ตรายคน -->
+    <div class="card" id="or-person-notes" style="display:none">
+      <div class="card-title">📝 โน้ตรายคน / ข้อมูลสำคัญ</div>
+      <textarea id="or-person-note-txt" rows="5" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:14px" placeholder="จดลักษณะนิสัย ความสนใจ สิ่งที่พูดคุย ขั้นตอนต่อไป..."></textarea>
+      <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="saveOrPersonNote()">💾 บันทึกโน้ต</button>
+    </div>
   </div>
 </div>
 
@@ -1668,26 +1706,113 @@ async function saveOutreach(){
   showToast('✓ บันทึกคนใหม่แล้ว');
   await renderOutreach();
 }
+let selectedOrPerson=null; // docId ของคนใหม่ที่เลือก
+
 async function renderOutreach(){
   try{
     const snap=await db.collection('outreach').where('mentor','==',currentMentor).get();
     const docs=snap.docs.map(d=>({...d.data(),docId:d.id})).sort((a,b)=>(b.ts||0)-(a.ts||0));
-    const tbody=document.getElementById('or-tbody');
     document.getElementById('or-count').textContent=`(${docs.length} คน)`;
-    if(!docs.length){tbody.innerHTML='';document.getElementById('or-empty').style.display='block';return;}
+    if(!docs.length){
+      document.getElementById('or-person-grid').innerHTML='';
+      document.getElementById('or-empty').style.display='block';
+      document.getElementById('or-detail').style.display='none';
+      return;
+    }
     document.getElementById('or-empty').style.display='none';
+    // กลุ่มตามชื่อ (nick+fname เป็น key)
+    const personMap={};
+    docs.forEach(d=>{
+      const key=(d.nick||d.fname||'?')+'__'+(d.fname||'');
+      if(!personMap[key]) personMap[key]={nick:d.nick,fname:d.fname,job:d.job,contact:d.contact,visits:[]};
+      personMap[key].visits.push(d);
+    });
+    const persons=Object.values(personMap);
     const statusColor={'เปิดใจ':'badge-green','กลาง':'badge-amber','ยังไม่พร้อม':'badge-red','ผู้เชื่อแล้ว':'badge-blue'};
-    tbody.innerHTML=docs.map(d=>`<tr>
-      <td>${formatDate(d.date)}</td>
-      <td><strong>${d.nick||''}</strong>${d.fname?' / '+d.fname:''}</td>
-      <td style="font-size:12px">${d.job||'—'}</td>
-      <td style="font-size:12px">${d.contact||'—'}</td>
-      <td><span class="badge ${statusColor[d.status]||'badge-warm'}">${d.status}</span></td>
-      <td>${d.dur}</td>
-      <td style="font-size:12px;max-width:160px">${d.note||'—'}</td>
-      <td><button class="btn btn-danger btn-sm" onclick="deleteOutreach('${d.docId}')">ลบ</button></td>
-    </tr>`).join('');
+    // ปุ่มรายชื่อ
+    document.getElementById('or-person-grid').innerHTML=persons.map((p,i)=>{
+      const latestStatus=p.visits.sort((a,b)=>(b.ts||0)-(a.ts||0))[0]?.status||'';
+      const bgColor=latestStatus==='เปิดใจ'?'var(--green-bg)':latestStatus==='ผู้เชื่อแล้ว'?'var(--blue-bg)':latestStatus==='ยังไม่พร้อม'?'var(--red-bg)':'var(--amber-bg)';
+      return`<button class="lamb-btn ${selectedOrPerson===i?'active':''}"
+        style="border-color:${latestStatus==='เปิดใจ'?'var(--green)':latestStatus==='ผู้เชื่อแล้ว'?'var(--blue)':'var(--border2)'}"
+        onclick="selectOrPerson(${i},this,${JSON.stringify(persons).replace(/'/g,"\'")})">${p.nick||p.fname||'?'}</button>`;
+    }).join('');
+    // ถ้ามีที่เลือกไว้แล้ว refresh detail
+    if(selectedOrPerson!==null && persons[selectedOrPerson]){
+      renderOrDetail(persons[selectedOrPerson]);
+    }
   }catch(e){console.error('renderOutreach:',e);}
+}
+
+function selectOrPerson(idx,btn,persons){
+  selectedOrPerson=idx;
+  document.querySelectorAll('#or-person-grid .lamb-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderOrDetail(persons[idx]);
+  showOrStab('or-visits',document.querySelectorAll('.stab')[0]);
+}
+
+function showOrStab(id,btn){
+  ['or-visits','or-person-notes'].forEach(s=>{
+    const el=document.getElementById(s);if(el)el.style.display='none';
+  });
+  document.querySelectorAll('#outreach-page .stab').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).style.display='block';
+  btn.classList.add('active');
+  if(id==='or-person-notes'&&selectedOrPerson!==null){
+    loadOrPersonNote();
+  }
+}
+
+function renderOrDetail(person){
+  document.getElementById('or-detail').style.display='block';
+  const latestVisit=person.visits.sort((a,b)=>(b.ts||0)-(a.ts||0))[0];
+  const nick=person.nick||person.fname||'?';
+  const fullName=person.nick&&person.fname?`${person.nick} (${person.fname})`:nick;
+  document.getElementById('or-detail-name').textContent='🌱 '+fullName;
+  document.getElementById('or-detail-meta').textContent=`อาชีพ: ${person.job||'—'} | รู้จักผ่าน: ${person.contact||'—'}`;
+  const statusColor={'เปิดใจ':'badge-green','กลาง':'badge-amber','ยังไม่พร้อม':'badge-red','ผู้เชื่อแล้ว':'badge-blue'};
+  const st=latestVisit?.status||'';
+  document.getElementById('or-detail-status-badge').innerHTML=
+    `<span class="badge ${statusColor[st]||'badge-warm'}" style="font-size:13px;padding:4px 12px">${st}</span>`;
+  const totalHrs=person.visits.reduce((a,v)=>a+(v.dur||0),0);
+  document.getElementById('or-detail-stats').innerHTML=`
+    <div class="stat-card"><div class="stat-val">${person.visits.length}</div><div class="stat-label">ครั้งที่พบ</div></div>
+    <div class="stat-card"><div class="stat-val">${totalHrs.toFixed(1)}</div><div class="stat-label">เวลารวม (ชม.)</div></div>
+    <div class="stat-card"><div class="stat-val">${formatDate(person.visits[person.visits.length-1]?.date)}</div><div class="stat-label">พบครั้งแรก</div></div>
+    <div class="stat-card"><div class="stat-val">${formatDate(latestVisit?.date)}</div><div class="stat-label">พบล่าสุด</div></div>
+  `;
+  // render ประวัติ
+  const tbody=document.getElementById('or-visit-tbody');
+  if(!person.visits.length){tbody.innerHTML='';document.getElementById('or-visit-empty').style.display='block';return;}
+  document.getElementById('or-visit-empty').style.display='none';
+  tbody.innerHTML=person.visits.map(v=>`<tr>
+    <td>${formatDate(v.date)}</td>
+    <td><span class="badge ${statusColor[v.status]||'badge-warm'}">${v.status}</span></td>
+    <td>${v.dur}</td>
+    <td style="font-size:12px;max-width:200px">${v.note||'—'}</td>
+    <td><button class="btn btn-danger btn-sm" onclick="deleteOutreach('${v.docId}')">ลบ</button></td>
+  </tr>`).join('');
+  // โน้ตรายคน
+  loadOrPersonNote();
+}
+
+async function loadOrPersonNote(){
+  if(selectedOrPerson===null)return;
+  // ใช้ชื่อเป็น key สำหรับ note
+  const grid=document.getElementById('or-person-grid');
+  const activeName=grid.querySelector('.lamb-btn.active')?.textContent||'';
+  try{
+    const doc=await db.collection('orNotes').doc(currentMentor+'__'+activeName).get();
+    document.getElementById('or-person-note-txt').value=doc.exists?doc.data().text:'';
+  }catch(e){}
+}
+async function saveOrPersonNote(){
+  const grid=document.getElementById('or-person-grid');
+  const activeName=grid.querySelector('.lamb-btn.active')?.textContent||'';
+  const text=document.getElementById('or-person-note-txt').value;
+  await db.collection('orNotes').doc(currentMentor+'__'+activeName).set({text});
+  showToast('✓ โน้ตบันทึกแล้ว');
 }
 async function deleteOutreach(docId){
   if(!confirm('ลบบันทึกนี้?'))return;
