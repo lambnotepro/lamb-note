@@ -460,6 +460,18 @@ tbody td{padding:8px 10px;vertical-align:top}
     <div class="empty" id="or-empty">ยังไม่มีบันทึก — เพิ่มด้านบนได้เลย</div>
   </div>
 
+  <!-- สรุปรวมทุกคน -->
+  <div class="card" id="or-summary-all">
+    <div class="card-title">📊 สรุปภาพรวมคนใหม่ทั้งหมด</div>
+    <div class="stat-grid" id="or-all-stats"></div>
+    <div class="tbl-wrap" style="margin-top:12px">
+      <table><thead><tr>
+        <th>ชื่อ</th><th>ครั้งที่พบ</th><th>เวลารวม(ชม.)</th><th>สถานะล่าสุด</th><th>พบล่าสุด</th>
+      </tr></thead>
+      <tbody id="or-all-tbody"></tbody>
+    </table></div>
+  </div>
+
   <!-- detail panel รายคน -->
   <div id="or-detail" style="display:none">
     <div class="card">
@@ -1708,48 +1720,76 @@ async function saveOutreach(){
 }
 let selectedOrPerson=null; // docId ของคนใหม่ที่เลือก
 
+let orPersonsCache=[]; // เก็บ persons data ไว้ใน JS
+
 async function renderOutreach(){
   try{
     const snap=await db.collection('outreach').where('mentor','==',currentMentor).get();
     const docs=snap.docs.map(d=>({...d.data(),docId:d.id})).sort((a,b)=>(b.ts||0)-(a.ts||0));
-    document.getElementById('or-count').textContent=`(${docs.length} คน)`;
+    document.getElementById('or-count').textContent=`(${docs.length} รายการ / `;
+
     if(!docs.length){
       document.getElementById('or-person-grid').innerHTML='';
       document.getElementById('or-empty').style.display='block';
       document.getElementById('or-detail').style.display='none';
+      document.getElementById('or-count').textContent='(0 คน)';
       return;
     }
     document.getElementById('or-empty').style.display='none';
-    // กลุ่มตามชื่อ (nick+fname เป็น key)
+
+    // กลุ่มตามชื่อ (nick เป็น primary key)
     const personMap={};
     docs.forEach(d=>{
-      const key=(d.nick||d.fname||'?')+'__'+(d.fname||'');
+      const key=(d.nick||d.fname||'ไม่ระบุชื่อ');
       if(!personMap[key]) personMap[key]={nick:d.nick,fname:d.fname,job:d.job,contact:d.contact,visits:[]};
+      // อัปเดตข้อมูลพื้นฐานถ้ามีใหม่กว่า
+      if(d.job) personMap[key].job=d.job;
+      if(d.contact) personMap[key].contact=d.contact;
+      if(d.fname) personMap[key].fname=d.fname;
       personMap[key].visits.push(d);
     });
-    const persons=Object.values(personMap);
+    orPersonsCache=Object.values(personMap);
+
+    // สถิติรวม
+    const totalHrsAll=docs.reduce((a,d)=>a+(d.dur||0),0);
+    document.getElementById('or-count').textContent=
+      `${orPersonsCache.length} คน | ${docs.length} ครั้ง | ${totalHrsAll.toFixed(1)} ชม.`;
+
     const statusColor={'เปิดใจ':'badge-green','กลาง':'badge-amber','ยังไม่พร้อม':'badge-red','ผู้เชื่อแล้ว':'badge-blue'};
+    const statusBorder={'เปิดใจ':'var(--green)','ผู้เชื่อแล้ว':'var(--blue)','ยังไม่พร้อม':'var(--red)','กลาง':'var(--amber)'};
+
     // ปุ่มรายชื่อ
-    document.getElementById('or-person-grid').innerHTML=persons.map((p,i)=>{
-      const latestStatus=p.visits.sort((a,b)=>(b.ts||0)-(a.ts||0))[0]?.status||'';
-      const bgColor=latestStatus==='เปิดใจ'?'var(--green-bg)':latestStatus==='ผู้เชื่อแล้ว'?'var(--blue-bg)':latestStatus==='ยังไม่พร้อม'?'var(--red-bg)':'var(--amber-bg)';
-      return`<button class="lamb-btn ${selectedOrPerson===i?'active':''}"
-        style="border-color:${latestStatus==='เปิดใจ'?'var(--green)':latestStatus==='ผู้เชื่อแล้ว'?'var(--blue)':'var(--border2)'}"
-        onclick="selectOrPerson(${i},this,${JSON.stringify(persons).replace(/'/g,"\'")})">${p.nick||p.fname||'?'}</button>`;
+    document.getElementById('or-person-grid').innerHTML=orPersonsCache.map((p,i)=>{
+      const sorted=[...p.visits].sort((a,b)=>(b.ts||0)-(a.ts||0));
+      const latestStatus=sorted[0]?.status||'';
+      const isActive=selectedOrPerson===i;
+      return`<button class="lamb-btn ${isActive?'active':''}"
+        style="${latestStatus?'border-color:'+( statusBorder[latestStatus]||'var(--border2)')+'':''};"
+        onclick="selectOrPerson(${i},this)">${p.nick||p.fname||'?'}
+        <span style="font-size:10px;margin-left:3px;opacity:0.7">(${p.visits.length})</span>
+      </button>`;
     }).join('');
+
+    // สรุปรวม
+    renderOrSummaryAll();
     // ถ้ามีที่เลือกไว้แล้ว refresh detail
-    if(selectedOrPerson!==null && persons[selectedOrPerson]){
-      renderOrDetail(persons[selectedOrPerson]);
+    if(selectedOrPerson!==null && orPersonsCache[selectedOrPerson]){
+      renderOrDetail(orPersonsCache[selectedOrPerson]);
     }
   }catch(e){console.error('renderOutreach:',e);}
 }
 
-function selectOrPerson(idx,btn,persons){
+function selectOrPerson(idx,btn){
   selectedOrPerson=idx;
   document.querySelectorAll('#or-person-grid .lamb-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  renderOrDetail(persons[idx]);
-  showOrStab('or-visits',document.querySelectorAll('.stab')[0]);
+  const person=orPersonsCache[idx];
+  if(person){
+    renderOrDetail(person);
+    // reset stab
+    const firstStab=document.querySelector('#outreach-page .stab');
+    if(firstStab) showOrStab('or-visits',firstStab);
+  }
 }
 
 function showOrStab(id,btn){
@@ -1795,6 +1835,47 @@ function renderOrDetail(person){
   </tr>`).join('');
   // โน้ตรายคน
   loadOrPersonNote();
+}
+
+function renderOrSummaryAll(){
+  if(!orPersonsCache.length) return;
+  const statusColor={'เปิดใจ':'badge-green','กลาง':'badge-amber','ยังไม่พร้อม':'badge-red','ผู้เชื่อแล้ว':'badge-blue'};
+  const totalVisits=orPersonsCache.reduce((a,p)=>a+p.visits.length,0);
+  const totalHrs=orPersonsCache.reduce((a,p)=>a+p.visits.reduce((b,v)=>b+(v.dur||0),0),0);
+  const openCount=orPersonsCache.filter(p=>[...p.visits].sort((a,b)=>(b.ts||0)-(a.ts||0))[0]?.status==='เปิดใจ').length;
+  const believedCount=orPersonsCache.filter(p=>[...p.visits].sort((a,b)=>(b.ts||0)-(a.ts||0))[0]?.status==='ผู้เชื่อแล้ว').length;
+  document.getElementById('or-all-stats').innerHTML=`
+    <div class="stat-card"><div class="stat-val">${orPersonsCache.length}</div><div class="stat-label">คนใหม่ทั้งหมด</div></div>
+    <div class="stat-card"><div class="stat-val">${totalVisits}</div><div class="stat-label">ครั้งที่พบรวม</div></div>
+    <div class="stat-card"><div class="stat-val">${totalHrs.toFixed(1)}</div><div class="stat-label">เวลารวม (ชม.)</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--green)">${openCount}</div><div class="stat-label">เปิดใจ</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--blue)">${believedCount}</div><div class="stat-label">ผู้เชื่อแล้ว</div></div>
+  `;
+  const tbody=document.getElementById('or-all-tbody');
+  tbody.innerHTML=orPersonsCache.map((p,i)=>{
+    const sorted=[...p.visits].sort((a,b)=>(b.ts||0)-(a.ts||0));
+    const st=sorted[0]?.status||'';
+    const hrs=p.visits.reduce((a,v)=>a+(v.dur||0),0);
+    return`<tr style="cursor:pointer" onclick="selectOrPersonFromTable(${i})">
+      <td><strong>${p.nick||p.fname||'?'}</strong>${p.fname&&p.nick?' ('+p.fname+')':''}</td>
+      <td style="text-align:center">${p.visits.length}</td>
+      <td style="text-align:center">${hrs.toFixed(1)}</td>
+      <td><span class="badge ${statusColor[st]||'badge-warm'}">${st}</span></td>
+      <td>${formatDate(sorted[0]?.date)}</td>
+    </tr>`;
+  }).join('');
+}
+function selectOrPersonFromTable(idx){
+  selectedOrPerson=idx;
+  // highlight ปุ่มด้วย
+  document.querySelectorAll('#or-person-grid .lamb-btn').forEach((b,i)=>{
+    b.classList.toggle('active',i===idx);
+  });
+  renderOrDetail(orPersonsCache[idx]);
+  // scroll ไปที่ detail
+  document.getElementById('or-detail').scrollIntoView({behavior:'smooth'});
+  const firstStab=document.querySelector('#outreach-page .stab');
+  if(firstStab) showOrStab('or-visits',firstStab);
 }
 
 async function loadOrPersonNote(){
