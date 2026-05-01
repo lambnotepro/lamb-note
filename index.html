@@ -392,6 +392,24 @@ tbody td{padding:8px 10px;vertical-align:top}
     <div class="card-title">👤 เลือกลูกแกะเพื่อดูประวัติ</div>
     <div class="lamb-grid" id="lamb-grid"></div>
   </div>
+
+  <!-- Pastor only: เพิ่ม/ลบลูกแกะของธีระ -->
+  <div id="pastor-lamb-manage-card" style="display:none">
+    <div class="card">
+      <div class="card-title">🐑 ลูกแกะของธีระ</div>
+      <div style="margin-bottom:12px">
+        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+          <div class="form-group" style="margin:0;flex:1;min-width:120px">
+            <label>ชื่อลูกแกะใหม่</label>
+            <input type="text" id="p-new-lamb-name" placeholder="ชื่อ" style="width:100%">
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="pastorAddLamb()" style="height:36px">+ เพิ่ม</button>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:6px">ลูกแกะของธีระ (คลิก ✕ เพื่อลบ)</div>
+      <div id="pastor-lamb-list" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+    </div>
+  </div>
   <div id="lamb-detail" style="display:none">
     <div class="card">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
@@ -615,6 +633,32 @@ tbody td{padding:8px 10px;vertical-align:top}
   </div>
 ```
 
+<!-- Evangelist Ranking -->
+
+```
+  <div class="card">
+    <div class="card-title">📣 รางวัลนักประกาศ</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+      <label style="font-size:13px;color:var(--text2)">ช่วงเวลา:</label>
+      <select id="evang-period" onchange="renderEvangelistRanking()" style="border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:13px">
+        <option value="month">เดือนนี้</option>
+        <option value="quarter">ไตรมาสนี้</option>
+        <option value="year">ปีนี้</option>
+        <option value="all">ทั้งหมด</option>
+      </select>
+      <label style="font-size:13px;color:var(--text2)">รางวัล:</label>
+      <select id="evang-prize" style="border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:13px">
+        <option value="บัตรของขวัญ 200฿">บัตรของขวัญ 200฿</option>
+        <option value="บัตรของขวัญ 500฿">บัตรของขวัญ 500฿</option>
+        <option value="อาหารเที่ยง">มื้ออาหาร</option>
+        <option value="ของรางวัลพิเศษ">ของรางวัลพิเศษ</option>
+        <option value="คำอธิษฐาน">คำอธิษฐานอวยพร</option>
+      </select>
+    </div>
+    <div id="evang-chart"></div>
+  </div>
+```
+
 <!-- Mentor summary -->
 
 ```
@@ -649,27 +693,8 @@ tbody td{padding:8px 10px;vertical-align:top}
     </div>
     <div class="empty" id="pastor-or-empty" style="display:none">ยังไม่มีบันทึก</div>
   </div>
-  <!-- จัดการลูกแกะ (pastor เพิ่ม/ลบได้) -->
-  <div class="card">
-    <div class="card-title">⚙️ จัดการลูกแกะ</div>
-    <div class="manage-section">
-      <h4>➕ เพิ่มลูกแกะใหม่</h4>
-      <div class="form-row">
-        <div class="form-group"><label>ชื่อลูกแกะ</label><input type="text" id="p-new-lamb-name" placeholder="ชื่อ"></div>
-        <div class="form-group"><label>พี่เลี้ยง</label>
-          <input type="text" id="p-new-lamb-mentor" value="ธีระ" readonly style="background:var(--surface2);color:var(--text2)">
-        </div>
-        <div class="form-group"><label>Care Group (auto)</label>
-          <input type="text" id="p-new-lamb-group" value="Pastor" readonly style="background:var(--surface2);color:var(--text2)">
-        </div>
-      </div>
-      <button class="btn btn-primary btn-sm" onclick="pastorAddLamb()">+ เพิ่ม</button>
-    </div>
-    <div class="manage-section">
-      <h4>🗑️ ลูกแกะทั้งหมด (คลิกเพื่อลบ)</h4>
-      <div id="pastor-lamb-list" style="display:flex;flex-wrap:wrap;gap:8px"></div>
-    </div>
-  </div>
+  <!-- จัดการลูกแกะ (pastor เพิ่มได้ในหน้าประวัติ) -->
+  <!-- ย้ายไปหน้าประวัติแล้ว -->
 </div>
 
 <!-- ADMIN PAGE -->
@@ -1147,8 +1172,11 @@ function initApp(){
 }
 function fillLambSelect(){
   const isPastor=PASTOR_IDS.includes(currentMentor);
-  // pastor และ admin เห็นลูกแกะทุกคน, mentor เห็นเฉพาะของตัวเอง
-  const myLambs=(currentMentor==='admin'||isPastor)?LAMBS:LAMBS.filter(l=>l.mentor===currentMentor);
+  // admin เห็นทุกคน, pastor เห็นเฉพาะลูกแกะของตัวเอง, mentor เห็นเฉพาะของตัวเอง
+  let myLambs;
+  if(currentMentor==='admin') myLambs=LAMBS;
+  else if(isPastor) myLambs=LAMBS.filter(l=>l.mentor===currentMentor);
+  else myLambs=LAMBS.filter(l=>l.mentor===currentMentor);
   const sel=document.getElementById('f-lamb');
   sel.innerHTML=myLambs.map(l=>`<option value="${l.id}">${l.name}</option>`).join('');
   sel.onchange=resetLogForm;
@@ -1283,15 +1311,25 @@ async function adminAddLog(){
 // ══════════════════════════════════════════════════════
 function renderLambGrid(){
   const isPastor=PASTOR_IDS.includes(currentMentor);
-  const myLambs=(currentMentor==='admin'||isPastor)?LAMBS:LAMBS.filter(l=>l.mentor===currentMentor);
-  document.getElementById('lamb-grid').innerHTML=myLambs.map(l=>
-    `<button class="lamb-btn ${l.id===selectedLambId?'active':''}" onclick="selectLamb('${l.id}',this)">${l.name}</button>`
-  ).join('');
-  // ถ้ามี selectedLambId อยู่แล้ว (กลับมาจากหน้าบันทึก) → โหลดข้อมูลทันที
-  if(selectedLambId){
+  // pastor เห็นเฉพาะลูกแกะของตัวเอง, admin เห็นทั้งหมด, mentor เห็นของตัวเอง
+  let myLambs;
+  if(currentMentor==='admin') myLambs=LAMBS;
+  else myLambs=LAMBS.filter(l=>l.mentor===currentMentor);
+
+  document.getElementById('lamb-grid').innerHTML=myLambs.length
+    ? myLambs.map(l=>`<button class="lamb-btn ${l.id===selectedLambId?'active':''}" onclick="selectLamb('${l.id}',this)">${l.name}</button>`).join('')
+    : '<div style="color:var(--text3);font-size:13px;padding:8px">ยังไม่มีลูกแกะ</div>';
+
+  // แสดง/ซ่อน pastor manage card
+  const manageCard=document.getElementById('pastor-lamb-manage-card');
+  if(manageCard) manageCard.style.display=isPastor?'block':'none';
+  if(isPastor) renderPastorLambManage();
+
+  if(selectedLambId && myLambs.find(l=>l.id===selectedLambId)){
     renderLambDetail(selectedLambId);
   } else {
     document.getElementById('lamb-detail').style.display='none';
+    selectedLambId=null;
   }
 }
 async function selectLamb(id,btn){
@@ -2239,6 +2277,7 @@ async function renderPastor(){
   // กราฟแท่งพี่เลี้ยงรายเดือน
   initMentorBarMonthSelect();
   renderMentorBarChart();
+  renderEvangelistRanking();
 }
 function fillPastorMentorSelect(){ /* ไม่ต้องใช้แล้ว */ }
 function pastorAutoFillGroup(){ /* ไม่ต้องใช้แล้ว */ }
@@ -2253,6 +2292,90 @@ function renderPastorMentors(allLogs){
     return`<tr><td style="font-weight:700;color:var(--warm)">${m}</td><td>${MENTOR_GROUPS[m]||''}</td><td>${myLambs.map(l=>l.name).join(', ')||'—'}</td><td>${mLogs.length}</td><td>${hrs.toFixed(1)}</td><td>${wkHrs.toFixed(1)}</td></tr>`;
   }).join('');
 }
+async function renderEvangelistRanking(){
+  const period=document.getElementById('evang-period')?document.getElementById('evang-period').value:'month';
+  const wrap=document.getElementById('evang-chart');
+  if(!wrap)return;
+
+  // ดึง outreach ทั้งหมด
+  var docs=[];
+  try{
+    if(db){
+      const snap=await db.collection('outreach').get();
+      docs=snap.docs.map(function(d){return d.data();});
+    }
+  }catch(e){console.error(e);}
+
+  // กรองช่วงเวลา
+  const now=new Date();
+  const yr=now.getFullYear();
+  const mo=now.getMonth();
+  docs=docs.filter(function(d){
+    if(!d.date)return false;
+    const dt=new Date(d.date+'T00:00:00');
+    if(period==='month') return dt.getFullYear()===yr && dt.getMonth()===mo;
+    if(period==='quarter'){
+      const q=Math.floor(mo/3);
+      return dt.getFullYear()===yr && Math.floor(dt.getMonth()/3)===q;
+    }
+    if(period==='year') return dt.getFullYear()===yr;
+    return true; // all
+  });
+
+  // ไม่รวม ธีระ และ admin
+  const EXCLUDE=['ธีระ','admin'];
+  const mentors=DEFAULT_MENTORS.filter(function(m){return !EXCLUDE.includes(m);});
+
+  // นับรายการคนใหม่ต่อพี่เลี้ยง (unique nick)
+  var data=mentors.map(function(m){
+    var mDocs=docs.filter(function(d){return d.mentor===m;});
+    // นับ unique ด้วย nick
+    var uniqueNames={};
+    mDocs.forEach(function(d){uniqueNames[d.nick||d.fname||'?']=true;});
+    return {name:m,count:mDocs.length,unique:Object.keys(uniqueNames).length};
+  }).sort(function(a,b){return b.unique-a.unique;});
+
+  var maxVal=Math.max.apply(null,data.map(function(d){return d.unique;}).concat([1]));
+  var medals=['🥇','🥈','🥉'];
+  var colors=['#c8860a','#8b7355','#6b9e6b','#5b8db8','#c87070','#7b6bc4','#c4926b','#5da8a8'];
+  var periodTH={month:'เดือนนี้',quarter:'ไตรมาสนี้',year:'ปีนี้',all:'ทั้งหมด'};
+
+  var html='<div style="font-size:12px;color:var(--text3);margin-bottom:10px">'+periodTH[period]+' · นับจำนวนคนใหม่ที่แต่ละพี่เลี้ยงแนะนำ (unique)</div>';
+
+  // Top 3 highlight
+  if(data[0]&&data[0].unique>0){
+    var prize=document.getElementById('evang-prize')?document.getElementById('evang-prize').value:'รางวัลพิเศษ';
+    html+='<div style="background:linear-gradient(135deg,#fff8e8,#fef3d0);border:1px solid #e8c860;border-radius:12px;padding:14px;margin-bottom:14px;text-align:center">'
+      +'<div style="font-size:22px">🏆</div>'
+      +'<div style="font-weight:700;font-size:16px;color:var(--warm)">'+data[0].name+'</div>'
+      +'<div style="font-size:13px;color:var(--text2);margin:2px 0">'+data[0].unique+' คน ใน'+periodTH[period]+'</div>'
+      +'<div style="font-size:12px;color:#c8860a;margin-top:6px;font-weight:700">🎁 รางวัล: '+prize+'</div>'
+      +'</div>';
+  }
+
+  // Bar chart ทุกคน
+  data.forEach(function(d,i){
+    var pct=maxVal>0?(d.unique/maxVal*100):0;
+    var medal=i<3?medals[i]:'';
+    var color=colors[i%colors.length];
+    html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+      +'<div style="width:62px;text-align:right;font-size:12px;font-weight:700;color:var(--warm);flex-shrink:0">'+medal+d.name+'</div>'
+      +'<div style="flex:1;background:#f0ece6;border-radius:6px;height:24px;position:relative;overflow:hidden">'
+      +'<div style="width:'+pct+'%;background:'+color+';height:100%;border-radius:6px;min-width:'+(d.unique>0?4:0)+'px"></div>';
+    if(d.unique>0){
+      html+='<span style="position:absolute;left:6px;top:50%;transform:translateY(-50%);font-size:11px;color:'+(pct>40?'white':'var(--text)')+';font-weight:700">'+d.unique+' คน ('+d.count+' บันทึก)</span>';
+    } else {
+      html+='<span style="font-size:11px;color:var(--text3);padding:2px 6px">0</span>';
+    }
+    html+='</div></div>';
+  });
+
+  if(data.every(function(d){return d.unique===0;})){
+    html+='<div style="text-align:center;color:var(--text3);font-size:13px;padding:16px">ยังไม่มีบันทึกคนใหม่ในช่วงนี้</div>';
+  }
+  wrap.innerHTML=html;
+}
+
 function initMentorBarMonthSelect(){
   const sel=document.getElementById('mentor-bar-month');
   if(!sel)return;
@@ -2390,24 +2513,39 @@ async function renderPastorOutreach(){
   }catch(e){console.error('renderPastorOutreach:',e);}
 }
 function renderPastorLambManage(){
-  document.getElementById('pastor-lamb-list').innerHTML=LAMBS.map(l=>
-    `<button class="lamb-btn" style="font-size:12px;padding:5px 10px" onclick="pastorDeleteLamb('${l.id}','${l.name}')">${l.name} ✕</button>`
-  ).join('');
+  var el=document.getElementById('pastor-lamb-list');
+  if(!el)return;
+  var pastorLambs=LAMBS.filter(function(l){return l.mentor==='ธีระ';});
+  if(pastorLambs.length===0){
+    el.innerHTML='<div style="color:var(--text3);font-size:13px">ยังไม่มีลูกแกะ</div>';
+    return;
+  }
+  var html='';
+  pastorLambs.forEach(function(l){
+    var safeId=String(l.id).replace(/'/g,'');
+    var safeName=String(l.name).replace(/'/g,'');
+    html+='<button class="lamb-btn" style="font-size:12px;padding:5px 10px" onclick="pastorDeleteLamb(\''+safeId+'\',\''+safeName+'\')">'+l.name+' ✕</button>';
+  });
+  el.innerHTML=html;
 }
 async function pastorAddLamb(){
   const name=document.getElementById('p-new-lamb-name').value.trim();
-  const mentor='ธีระ'; // ล็อคพี่เลี้ยงเป็น ธีระ เสมอ
+  if(!name){showToast('กรุณากรอกชื่อ');return;}
+  const mentor='ธีระ';
   const group='Pastor';
-  if(!name)return;
-  const ids=LAMBS.map(l=>parseInt(l.id.replace('L',''))||0);
-  const nextNum=Math.max(...ids,0)+1;
-  const newId='L'+String(nextNum).padStart(3,'0');
-  const newLamb={id:newId,name,mentor,group};
-  await db.collection('lambs').doc(newId).set(newLamb);
-  LAMBS.push(newLamb);LAMBS.sort((a,b)=>a.id.localeCompare(b.id));
-  document.getElementById('p-new-lamb-name').value='';
-  renderPastorLambManage();
-  showToast(`✓ เพิ่ม ${name} แล้ว`);
+  const newId='LP'+Date.now();
+  const newLamb={id:newId,name:name,mentor:mentor,group:group};
+  try{
+    await db.collection('lambs').doc(newId).set(newLamb);
+    LAMBS.push(newLamb);
+    LAMBS.sort(function(a,b){return a.name.localeCompare(b.name,'th');});
+    document.getElementById('p-new-lamb-name').value='';
+    renderLambGrid();
+    fillLambSelect();
+    showToast('✓ เพิ่ม '+name+' แล้ว');
+  }catch(e){
+    showToast('เพิ่มไม่ได้: '+e.message);
+  }
 }
 async function pastorDeleteLamb(id,name){
   if(!confirm(`ลบลูกแกะ "${name}" ออกจากระบบ?`))return;
