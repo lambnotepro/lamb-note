@@ -38,7 +38,6 @@ function focusPwd(){
   if(p && p.style.display !== 'none') p.focus();
   else tryLogin();
 }
-// BUG2 fix: clear รหัสเมื่อเปลี่ยนชื่อ
 var _prevName = '';
 var _origOnNameInput = onNameInput;
 onNameInput = function(){
@@ -50,7 +49,6 @@ onNameInput = function(){
   }
   _origOnNameInput();
 };
-// doLogin wrapper — รอ Firebase พร้อมแล้วค่อยเรียก
 window._checkFbReady = function(){
   window._fbSdkReady = (window._fbAppReady && window._fbFsReady);
 };
@@ -61,7 +59,6 @@ function tryLogin(){
   var btn = document.getElementById('login-btn');
   err.style.display='none';
   if(!name){ err.textContent='กรุณาพิมพ์ชื่อ'; err.style.display='block'; return; }
-  // ตรวจรหัสจาก early data ก่อน (ไม่รอ Firebase)
   if(name==='admin'){
     if(pwd!=='kc0460'){ err.textContent='รหัสผ่าน Admin ไม่ถูกต้อง'; err.style.display='block'; return; }
   } else if(!Object.keys(MENTOR_GROUPS_EARLY).includes(name)){
@@ -70,14 +67,9 @@ function tryLogin(){
     var expected = MENTOR_PASSWORDS_EARLY[name]||'';
     if(expected && pwd!==expected){ err.textContent='รหัสผ่านไม่ถูกต้อง'; err.style.display='block'; return; }
   }
-  // รหัสถูก — เข้าทันที (LAMBS hardcode แล้ว ไม่ต้องรอ Firebase)
   doLogin();
 }
 </script>
-
-<!-- ═══════════════════════════════════════════════════════════════
-     🔥 FIREBASE CONFIG — ใส่ค่าของคุณตรงนี้หลังสร้าง project
-     ═══════════════════════════════════════════════════════════════ -->
 
 <script>
 const FIREBASE_CONFIG = {
@@ -88,44 +80,25 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "701135011337",
   appId:             "1:701135011337:web:8a9d4c2deb30cf3a3ac2d8"
 };
-// รหัสผ่าน admin — เปลี่ยนได้เลย
 const ADMIN_PASSWORD = "kc0460";
-// ไอดีที่มีสิทธิ์ pastor — เห็นสรุปภาพรวม + คนใหม่ + เพิ่ม/ลบลูกแกะได้ (แต่ไม่เห็นรายละเอียดบันทึกของพี่เลี้ยงคนอื่น)
 const PASTOR_IDS = ['ธีระ'];
 
 function setupNavForUser(name){
   const isAdmin = name === 'admin';
   const isPastor = PASTOR_IDS.includes(name);
-  // topbar
   document.getElementById('topbar-user').textContent =
     isAdmin ? '🔑 Admin' :
     isPastor ? ('⛪ '+name+' | Pastor') :
     ('พี่เลี้ยง: '+name+' | '+(MENTOR_GROUPS[name]||''));
-  // nav buttons
   document.getElementById('admin-nav-btn').style.display = isAdmin ? '' : 'none';
   const pBtn = document.getElementById('pastor-nav-btn');
   if(pBtn) pBtn.style.display = isPastor ? '' : 'none';
 }
-// รหัสผ่านพี่เลี้ยง — Admin กรอกหลังได้รับจากพี่เลี้ยงแต่ละคน
-// รูปแบบ: 'ชื่อ': 'รหัสผ่าน'  (ถ้ายังไม่มีรหัส ให้ปล่อยว่างไว้ก่อน)
 const MENTOR_PASSWORDS = {
-  'ทีม':       'afvxgqqd',
-  'หมิว':      'Malimilamali',
-  'สิงโต':     '',
-  'คช.':       '1150',
-  'แพรว':      'Praew1998',
-  'ทราย':      'Thidarat28',
-  'แมนยู':     '010143',
-  'โบ๊ต':      '201412',
-  'เจ้าคุณ':   '',
-  'ภูมิ':      '',
-  'สิบ':       '03111990',
-  'กาเหว่า':   '',
-  'ไผ่':       '',
-  'แอม':       '',
-  'เดียร์':    '',
-  'เกด':       '',
-  'ธีระ':      'teerahope',
+  'ทีม':'afvxgqqd','หมิว':'Malimilamali','สิงโต':'','คช.':'1150',
+  'แพรว':'Praew1998','ทราย':'Thidarat28','แมนยู':'010143','โบ๊ต':'201412',
+  'เจ้าคุณ':'','ภูมิ':'','สิบ':'03111990','กาเหว่า':'',
+  'ไผ่':'','แอม':'','เดียร์':'','เกด':'','ธีระ':'teerahope',
 };
 </script>
 
@@ -144,13 +117,11 @@ const MENTOR_PASSWORDS = {
 }
 body{font-family:'Sarabun','Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px}
 
-/* ── LOADING OVERLAY ── */
 #loading-overlay{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:14px}
 #loading-overlay .spin{width:40px;height:40px;border:4px solid var(--warm-light);border-top-color:var(--warm);border-radius:50%;animation:spin 0.8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 #loading-overlay p{color:var(--text2);font-size:14px}
 
-/* ── LOGIN ── */
 #login-page{display:none;align-items:center;justify-content:center;min-height:100vh;padding:20px}
 .login-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px 36px;width:100%;max-width:400px;box-shadow:var(--shadow);text-align:center}
 .login-logo{font-size:48px;margin-bottom:8px}
@@ -165,7 +136,6 @@ body{font-family:'Sarabun','Segoe UI',sans-serif;background:var(--bg);color:var(
 .login-err{font-size:13px;color:var(--red);margin-top:10px;display:none;background:var(--red-bg);padding:8px 12px;border-radius:var(--radius-sm)}
 .login-hint{font-size:12px;color:var(--text3);margin-top:12px}
 
-/* ── APP SHELL ── */
 #app{display:none;flex-direction:column;min-height:100vh}
 .topbar{background:var(--warm);color:#fff;padding:0 16px;height:52px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(140,90,40,0.2)}
 .topbar-logo{font-size:20px;font-weight:700}
@@ -179,7 +149,6 @@ body{font-family:'Sarabun','Segoe UI',sans-serif;background:var(--bg);color:var(
 .content{flex:1;padding:16px;max-width:1100px;margin:0 auto;width:100%}
 .page{display:none}.page.active{display:block}
 
-/* ── CARDS ── */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);margin-bottom:16px}
 .card-title{font-size:15px;font-weight:700;color:var(--warm);margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .badge{display:inline-block;padding:2px 9px;border-radius:12px;font-size:12px;font-weight:600}
@@ -188,7 +157,6 @@ body{font-family:'Sarabun','Segoe UI',sans-serif;background:var(--bg);color:var(
 .badge-warm{background:var(--warm-light);color:var(--warm)}
 .badge-green{background:var(--green-bg);color:var(--green)}
 
-/* ── TABLE ── */
 .tbl-wrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:13px}
 thead th{background:var(--surface2);color:var(--text2);font-weight:600;padding:8px 10px;text-align:left;border-bottom:1.5px solid var(--border)}
@@ -196,7 +164,6 @@ tbody tr{border-bottom:1px solid var(--border)}
 tbody tr:hover{background:var(--surface2)}
 tbody td{padding:8px 10px;vertical-align:top}
 
-/* ── FORM ── */
 .form-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
 .form-group{display:flex;flex-direction:column;gap:4px;flex:1;min-width:130px}
 .form-group label{font-size:12px;color:var(--text2);font-weight:600}
@@ -210,59 +177,51 @@ tbody td{padding:8px 10px;vertical-align:top}
 .btn-danger{background:var(--red-bg);color:var(--red);border:1px solid #f0c0c0}.btn-danger:hover{background:#f5d0d0}
 .btn-outline{background:transparent;border:1.5px solid var(--border2);color:var(--text2)}.btn-outline:hover{border-color:var(--warm);color:var(--warm)}
 
-/* ── STATS ── */
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px}
 .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center}
 .stat-val{font-size:26px;font-weight:700;color:var(--warm)}
 .stat-label{font-size:11px;color:var(--text2);margin-top:2px}
 
-/* ── LAMB GRID ── */
 .lamb-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
 .lamb-btn{padding:7px 14px;border-radius:20px;border:1.5px solid var(--border2);background:var(--surface);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;transition:all 0.15s;font-weight:500}
 .lamb-btn:hover{border-color:var(--warm);color:var(--warm);background:var(--warm-light)}
 .lamb-btn.active{background:var(--warm);color:#fff;border-color:var(--warm)}
 
-/* ── STABS ── */
 .stabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
 .stab{padding:6px 12px;border-radius:20px;border:1.5px solid var(--border);background:transparent;color:var(--text2);font-size:12px;cursor:pointer;font-family:inherit;font-weight:500;transition:all 0.15s}
 .stab.active{background:var(--warm-light);border-color:var(--warm);color:var(--warm);font-weight:700}
 
-/* ── LESSON TAG ── */
 .lesson-tag{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;background:var(--blue-bg);color:var(--blue);margin:2px}
 .progress-wrap{background:var(--surface2);border-radius:10px;height:7px;overflow:hidden;margin-top:4px}
 .progress-fill{height:100%;background:var(--warm);border-radius:10px;transition:width 0.4s}
 .note-section{background:var(--surface2);border-radius:var(--radius);padding:12px;margin-bottom:10px}
 .note-section h4{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px}
 
-/* ── CHART ── */
 .chart-bar-wrap{display:flex;align-items:center;gap:8px;margin-bottom:5px}
 .chart-bar-label{font-size:12px;color:var(--text2);min-width:76px;text-align:right}
 .chart-bar-bg{flex:1;background:var(--surface2);border-radius:4px;height:16px;overflow:hidden}
 .chart-bar-fill{height:100%;background:var(--warm-light);border-radius:4px;display:flex;align-items:center;padding-left:5px;font-size:11px;color:var(--warm);font-weight:600;transition:width 0.4s}
 
-/* ── MISC ── */
 .empty{text-align:center;padding:28px;color:var(--text3);font-size:13px}
 .mentor-row td:first-child{font-weight:700;color:var(--warm)}
 .saving-toast{position:fixed;bottom:20px;right:20px;background:var(--warm);color:#fff;padding:10px 18px;border-radius:20px;font-size:13px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,0.2);z-index:500;display:none;transition:opacity 0.3s}
 @media(max-width:600px){.form-row{flex-direction:column}.nav-btn{padding:10px 10px;font-size:12px}.content{padding:10px}}
 
-/* ── ADMIN MANAGE ── */
 .manage-section{background:var(--surface2);border-radius:var(--radius);padding:14px;margin-bottom:12px}
 .manage-section h4{font-size:13px;font-weight:700;color:var(--warm);margin-bottom:10px}
+
+/* ── อายุ badge ── */
+.age-badge{display:inline-block;background:var(--warm-light);color:var(--warm);border-radius:10px;padding:1px 8px;font-size:11px;font-weight:600}
 </style>
 
 </head>
 <body>
-
-<!-- LOADING -->
 
 <div id="loading-overlay" style="display:none">
   <div style="font-size:36px">🐑</div>
   <div class="spin"></div>
   <p id="loading-msg">กำลังเชื่อมต่อ Firebase...</p>
 </div>
-
-<!-- LOGIN -->
 
 <div id="login-page" style="display:flex">
   <div class="login-card">
@@ -279,8 +238,6 @@ tbody td{padding:8px 10px;vertical-align:top}
   </div>
 </div>
 
-<!-- APP -->
-
 <div id="app">
   <div class="topbar">
     <div class="topbar-logo">🐑 Lamb Note</div>
@@ -296,8 +253,8 @@ tbody td{padding:8px 10px;vertical-align:top}
   </div>
   <div class="content">
 
-```
 <!-- LOG PAGE -->
+
 <div class="page active" id="log-page">
   <div class="card">
     <div class="card-title">✏️ บันทึกการใช้เวลา</div>
@@ -347,14 +304,12 @@ tbody td{padding:8px 10px;vertical-align:top}
     <button class="btn btn-primary" id="save-log-btn" onclick="addLog()">+ บันทึก</button>
   </div>
 
-  <!-- ตารางนัดหมายสัปดาห์ -->
   <div class="card">
     <div class="card-title" style="justify-content:space-between">
       <span>📅 แผนการใช้เวลาสัปดาห์นี้</span>
       <span id="schedule-week-label" style="font-size:12px;color:var(--text2);font-weight:400"></span>
     </div>
     <div style="overflow-x:auto" id="schedule-table-wrap"></div>
-    <!-- Modal เพิ่มนัดหมาย -->
     <div id="schedule-modal" style="display:none;margin-top:14px;background:var(--surface2);border-radius:var(--radius);padding:14px;border:1.5px solid var(--border)">
       <div style="font-size:13px;font-weight:700;color:var(--warm);margin-bottom:10px" id="schedule-modal-title">➕ เพิ่มนัดหมาย</div>
       <div class="form-row">
@@ -387,13 +342,13 @@ tbody td{padding:8px 10px;vertical-align:top}
 </div>
 
 <!-- PROFILE PAGE -->
+
 <div class="page" id="profile-page">
   <div class="card">
     <div class="card-title">👤 เลือกลูกแกะเพื่อดูประวัติ</div>
     <div class="lamb-grid" id="lamb-grid"></div>
   </div>
 
-  <!-- Pastor only: เพิ่ม/ลบลูกแกะของธีระ -->
   <div id="pastor-lamb-manage-card" style="display:none">
     <div class="card">
       <div class="card-title">🐑 ลูกแกะของธีระ</div>
@@ -476,8 +431,8 @@ tbody td{padding:8px 10px;vertical-align:top}
 </div>
 
 <!-- OUTREACH PAGE -->
+
 <div class="page" id="outreach-page">
-  <!-- Form เพิ่มคนใหม่ -->
   <div class="card">
     <div class="card-title">🌱 บันทึกการเยี่ยมเยียนคนใหม่</div>
     <div class="form-row">
@@ -493,8 +448,9 @@ tbody td{padding:8px 10px;vertical-align:top}
         <label>อาชีพ / สถานะ</label>
         <input type="text" id="or-job" placeholder="เช่น นักศึกษา, พนักงาน">
       </div>
-      <div class="form-group" style="max-width:150px">
-        <label>วันเกิด</label>
+      <!-- ✅ FIX 1: วันเกิดเป็น date picker -->
+      <div class="form-group" style="max-width:160px">
+        <label>วันเกิด 🎂</label>
         <input type="date" id="or-bday" placeholder="วันเกิด">
       </div>
     </div>
@@ -532,7 +488,6 @@ tbody td{padding:8px 10px;vertical-align:top}
     <button class="btn btn-primary" id="or-save-btn" onclick="saveOutreach()">+ บันทึก</button>
   </div>
 
-  <!-- ปุ่มรายชื่อคนใหม่ -->
   <div class="card">
     <div class="card-title" style="justify-content:space-between">
       <span>👥 รายชื่อคนใหม่ที่เยี่ยมเยียน</span>
@@ -543,18 +498,21 @@ tbody td{padding:8px 10px;vertical-align:top}
   </div>
 
   <!-- สรุปรวมทุกคน -->
+
   <div class="card" id="or-summary-all">
     <div class="card-title">📊 สรุปภาพรวมคนใหม่ทั้งหมด</div>
     <div class="stat-grid" id="or-all-stats"></div>
     <div class="tbl-wrap" style="margin-top:12px">
+      <!-- ✅ FIX 2: เพิ่ม header "อายุ" -->
       <table><thead><tr>
-        <th>ชื่อ</th><th>ครั้งที่พบ</th><th>เวลารวม(ชม.)</th><th>สถานะล่าสุด</th><th>พบล่าสุด</th>
+        <th>ชื่อ</th><th>อายุ</th><th>ครั้งที่พบ</th><th>เวลารวม(ชม.)</th><th>สถานะล่าสุด</th><th>พบล่าสุด</th>
       </tr></thead>
       <tbody id="or-all-tbody"></tbody>
     </table></div>
   </div>
 
   <!-- detail panel รายคน -->
+
   <div id="or-detail" style="display:none">
     <div class="card">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
@@ -565,47 +523,53 @@ tbody td{padding:8px 10px;vertical-align:top}
         </div>
         <span id="or-detail-status-badge"></span>
       </div>
-      <!-- ข้อมูลพื้นฐาน -->
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px" id="or-detail-info"></div>
-      <!-- สรุปเวลา -->
       <div class="stat-grid" id="or-detail-stats"></div>
     </div>
 
-    <!-- แท็บ -->
-    <div class="stabs" style="margin-top:0">
-      <button class="stab active" onclick="showOrStab('or-visits',this)">📋 ประวัติการเยี่ยมเยียน</button>
-      <button class="stab" onclick="showOrStab('or-person-notes',this)">📝 โน้ตรายคน</button>
-    </div>
+```
+<div class="stabs" style="margin-top:0">
+  <button class="stab active" onclick="showOrStab('or-visits',this)">📋 ประวัติการเยี่ยมเยียน</button>
+  <button class="stab" onclick="showOrStab('or-person-notes',this)">📝 โน้ตรายคน</button>
+</div>
 
-    <!-- ประวัติการเยี่ยม -->
-    <div class="card" id="or-visits">
-      <div class="card-title">📋 ประวัติการเยี่ยมเยียน</div>
-      <div class="tbl-wrap">
-        <table><thead><tr>
-          <th>วันที่</th><th>สถานะ</th><th>ชม.</th><th>โน้ต</th><th></th>
-        </tr></thead>
-        <tbody id="or-visit-tbody"></tbody></table>
-      </div>
-      <div class="empty" id="or-visit-empty" style="display:none">ยังไม่มีบันทึก</div>
+<!-- ✅ FIX 3: ประวัติการเยี่ยม — เพิ่มคอลัมน์คอมเมนต์ -->
+<div class="card" id="or-visits">
+  <div class="card-title" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <span>📋 ประวัติการเยี่ยมเยียน</span>
+    <!-- ช่องอายุแก้ไขได้ -->
+    <div style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:400;color:var(--text2)">
+      <span>🎂 วันเกิด:</span>
+      <input type="date" id="or-bday-edit" style="padding:3px 8px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:12px;font-family:inherit" onchange="updateOrBday(this.value)">
+      <span id="or-age-display" style="color:var(--warm);font-weight:700"></span>
     </div>
+  </div>
+  <div class="tbl-wrap">
+    <table><thead><tr>
+      <th>วันที่</th><th>สถานะ</th><th>ชม.</th><th>โน้ต / คอมเมนต์</th><th></th>
+    </tr></thead>
+    <tbody id="or-visit-tbody"></tbody></table>
+  </div>
+  <div class="empty" id="or-visit-empty" style="display:none">ยังไม่มีบันทึก</div>
+</div>
 
-    <!-- โน้ตรายคน -->
-    <div class="card" id="or-person-notes" style="display:none">
-      <div class="card-title">📝 โน้ตรายคน / ข้อมูลสำคัญ</div>
-      <textarea id="or-person-note-txt" rows="5" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:14px" placeholder="จดลักษณะนิสัย ความสนใจ สิ่งที่พูดคุย ขั้นตอนต่อไป..."></textarea>
-      <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="saveOrPersonNote()">💾 บันทึกโน้ต</button>
-    </div>
+<div class="card" id="or-person-notes" style="display:none">
+  <div class="card-title">📝 โน้ตรายคน / ข้อมูลสำคัญ</div>
+  <textarea id="or-person-note-txt" rows="5" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:14px" placeholder="จดลักษณะนิสัย ความสนใจ สิ่งที่พูดคุย ขั้นตอนต่อไป..."></textarea>
+  <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="saveOrPersonNote()">💾 บันทึกโน้ต</button>
+</div>
+```
+
   </div>
 </div>
 
 <!-- PASTOR PAGE -->
+
 <div class="page" id="pastor-page">
-  <!-- Stats -->
   <div class="card">
     <div class="card-title">⛪ ภาพรวม — Pastor View</div>
     <div class="stat-grid" id="pastor-stats"></div>
   </div>
-  <!-- Chart -->
   <div class="card">
     <div class="card-title">📊 สถิติเวลา</div>
     <div class="stabs">
@@ -620,13 +584,11 @@ tbody td{padding:8px 10px;vertical-align:top}
     </div>
     <div id="pastor-chart"></div>
   </div>
-  <!-- Mentor Bar Chart รายเดือน -->
   <div class="card">
     <div class="card-title">🏆 เวลาพี่เลี้ยงรายเดือน</div>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
       <label style="font-size:13px;color:var(--text2)">เดือน:</label>
-      <select id="mentor-bar-month" onchange="renderMentorBarChart()" style="border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:13px">
-      </select>
+      <select id="mentor-bar-month" onchange="renderMentorBarChart()" style="border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:13px"></select>
       <label style="font-size:13px;color:var(--text2)">แสดงเป็น:</label>
       <select id="mentor-bar-unit" onchange="renderMentorBarChart()" style="border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:13px">
         <option value="hrs">ชั่วโมง (ชม.)</option>
@@ -635,11 +597,6 @@ tbody td{padding:8px 10px;vertical-align:top}
     </div>
     <div id="mentor-bar-chart" style="padding:4px 0"></div>
   </div>
-```
-
-<!-- Evangelist Ranking -->
-
-```
   <div class="card">
     <div class="card-title">📣 รางวัลนักประกาศ</div>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
@@ -650,15 +607,9 @@ tbody td{padding:8px 10px;vertical-align:top}
         <option value="year">ปีนี้</option>
         <option value="all">ทั้งหมด</option>
       </select>
-
     </div>
     <div id="evang-chart"></div>
   </div>
-```
-
-<!-- Mentor summary -->
-
-```
   <div class="card">
     <div class="card-title">👥 สรุปรายพี่เลี้ยง</div>
     <div class="tbl-wrap">
@@ -666,7 +617,6 @@ tbody td{padding:8px 10px;vertical-align:top}
       <tbody id="pastor-mentor-tbody"></tbody></table>
     </div>
   </div>
-  <!-- Outreach summary -->
   <div class="card">
     <div class="card-title">🌱 สรุปคนใหม่ทุกพี่เลี้ยง</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
@@ -690,18 +640,15 @@ tbody td{padding:8px 10px;vertical-align:top}
     </div>
     <div class="empty" id="pastor-or-empty" style="display:none">ยังไม่มีบันทึก</div>
   </div>
-  <!-- จัดการลูกแกะ (pastor เพิ่มได้ในหน้าประวัติ) -->
-  <!-- ย้ายไปหน้าประวัติแล้ว -->
 </div>
 
 <!-- ADMIN PAGE -->
+
 <div class="page" id="admin-page">
-  <!-- Stats -->
   <div class="card">
     <div class="card-title">🔑 Admin — สรุปภาพรวม</div>
     <div class="stat-grid" id="admin-stats"></div>
   </div>
-  <!-- Chart -->
   <div class="card">
     <div class="card-title">📊 สถิติเวลา</div>
     <div class="stabs">
@@ -717,7 +664,6 @@ tbody td{padding:8px 10px;vertical-align:top}
     </div>
     <div id="admin-chart"></div>
   </div>
-  <!-- Outreach summary for admin -->
   <div class="card" id="admin-outreach-card">
     <div class="card-title">🌱 สรุปคนใหม่ทุกพี่เลี้ยง</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
@@ -746,7 +692,6 @@ tbody td{padding:8px 10px;vertical-align:top}
     </div>
     <div class="empty" id="admin-or-empty" style="display:none">ยังไม่มีบันทึก</div>
   </div>
-  <!-- Mentor summary (anonymous for report) -->
   <div class="card">
     <div class="card-title">👥 สรุปรายพี่เลี้ยง</div>
     <div class="tbl-wrap">
@@ -754,7 +699,6 @@ tbody td{padding:8px 10px;vertical-align:top}
       <tbody id="admin-mentor-tbody"></tbody></table>
     </div>
   </div>
-  <!-- Manage Lambs -->
   <div class="card" id="admin-manage-card">
     <div class="card-title">⚙️ จัดการลูกแกะ</div>
     <div class="manage-section">
@@ -775,7 +719,6 @@ tbody td{padding:8px 10px;vertical-align:top}
       <div id="admin-lamb-list" style="display:flex;flex-wrap:wrap;gap:8px"></div>
     </div>
   </div>
-  <!-- Admin log entry on behalf of mentor -->
   <div class="card">
     <div class="card-title">✏️ บันทึกแทนพี่เลี้ยง</div>
     <div class="form-row">
@@ -819,7 +762,6 @@ tbody td{padding:8px 10px;vertical-align:top}
     </div>
     <button class="btn btn-primary btn-sm" onclick="adminAddLog()">+ บันทึกแทน</button>
   </div>
-  <!-- All logs -->
   <div class="card">
     <div class="card-title">📋 บันทึกทั้งหมด</div>
     <div style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap">
@@ -839,7 +781,6 @@ tbody td{padding:8px 10px;vertical-align:top}
     <div class="empty" id="admin-log-empty" style="display:none">ไม่มีบันทึก</div>
   </div>
 </div>
-```
 
   </div><!-- /content -->
 </div><!-- /app -->
@@ -871,8 +812,6 @@ const LESSONS = {
 //  STATE
 // ══════════════════════════════════════════════════════
 let db, currentMentor=null, selectedLambId=null, currentAdminChart='weekly';
-// LAMBS: hardcode ไว้เลย ไม่รอ Firestore — login ทันที
-// admin/pastor เพิ่ม/ลบได้ผ่าน UI (sync กับ Firestore + update array นี้)
 let LAMBS = [
   {id:'L001',name:'สิงโต',mentor:'ทีม',group:'Advance Pro'},
   {id:'L002',name:'ไผ่',mentor:'ทีม',group:'Advance Pro'},
@@ -916,22 +855,16 @@ async function initFirebase(){
   try{
     firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
-
-    // ── sync LAMBS จาก Firestore (overwrite hardcode) ──
     try{
       const snap=await db.collection('lambs').get();
       if(!snap.empty){
-        // มีข้อมูลใน Firestore → ใช้จาก Firestore เป็น source of truth
         LAMBS=snap.docs.map(d=>d.data()).sort((a,b)=>a.name.localeCompare(b.name,'th'));
       } else {
-        // ไม่มีใน Firestore → seed จาก hardcode
         const batch=db.batch();
         LAMBS.forEach(l=>batch.set(db.collection('lambs').doc(l.id),l));
         await batch.commit();
       }
     }catch(e){ console.error('sync lambs:',e); }
-
-    // restore session ถ้ามี
     const savedMentor=sessionStorage.getItem('ln_mentor');
     if(savedMentor){
       currentMentor=savedMentor;
@@ -948,7 +881,6 @@ async function initFirebase(){
       const targetPage2=document.getElementById(savedPage2);
       if(targetPage2)targetPage2.classList.add('active');
       if(navBtn2)navBtn2.classList.add('active');
-      // re-render หลัง LAMBS sync แล้ว
       initApp();
       const savedLamb2=sessionStorage.getItem('ln_lamb')||'';
       if(savedPage2==='profile-page'){selectedLambId=savedLamb2||null;renderLambGrid();}
@@ -956,21 +888,17 @@ async function initFirebase(){
       if(savedPage2==='pastor-page')renderPastor();
       if(savedPage2==='admin-page')renderAdmin();
     } else if(currentMentor){
-      // doLogin เร็วกว่า initFirebase → re-render ด้วย LAMBS ที่ sync แล้ว
       initApp();
       if(currentMentor!=='admin') renderScheduleTable();
     }
-  }catch(e){
-    console.error('initFirebase error:',e);
-  }
+  }catch(e){ console.error('initFirebase error:',e); }
 }
 
 // ══════════════════════════════════════════════════════
 //  FIRESTORE HELPERS
 // ══════════════════════════════════════════════════════
-let _lambsPromise = null; // dedup — ไม่ให้โหลดซ้ำ
+let _lambsPromise = null;
 async function loadLambs(){
-  // ถ้ากำลังโหลดอยู่แล้ว รอ promise เดิมแทน
   if(_lambsPromise) return _lambsPromise;
   _lambsPromise = (async()=>{
     try{
@@ -982,52 +910,9 @@ async function loadLambs(){
       } else {
         LAMBS = snap.docs.map(d=>d.data()).sort((a,b)=>a.id.localeCompare(b.id));
       }
-    }catch(e){
-      console.error('loadLambs:',e);
-      _lambsPromise = null; // reset ถ้า error เพื่อให้ retry ได้
-    }
+    }catch(e){ console.error('loadLambs:',e); _lambsPromise = null; }
   })();
   return _lambsPromise;
-}
-async function seedDefaultLambs(){
-  const defaults=[
-    {id:'L001',name:'สิงโต',mentor:'ทีม',group:'Advance Pro'},
-    {id:'L002',name:'ไผ่',mentor:'ทีม',group:'Advance Pro'},
-    {id:'L003',name:'คช.',mentor:'ทีม',group:'Advance Pro'},
-    {id:'L004',name:'กาเหว่า',mentor:'ทีม',group:'Advance Pro'},
-    {id:'L005',name:'เฮ้าส์',mentor:'ทีม',group:'Advance Pro'},
-    {id:'L006',name:'เบส',mentor:'ทีม',group:'Advance Pro'},
-    {id:'L007',name:'ว่าน',mentor:'ทีม',group:'Advance Pro'},
-    {id:'L008',name:'เนม',mentor:'หมิว',group:'Advance Pro'},
-    {id:'L009',name:'ดรีม(ญ.)',mentor:'หมิว',group:'Advance Pro'},
-    {id:'L010',name:'อากิ',mentor:'สิงโต',group:'Startup Pro'},
-    {id:'L011',name:'ภูมิ',mentor:'คช.',group:'Startup Pro'},
-    {id:'L012',name:'ไท',mentor:'คช.',group:'Startup Pro'},
-    {id:'L013',name:'ดรีม(ช.)',mentor:'คช.',group:'Startup Pro'},
-    {id:'L014',name:'เกด',mentor:'แพรว',group:'Startup Pro'},
-    {id:'L015',name:'เดียร์',mentor:'แพรว',group:'Startup Pro'},
-    {id:'L016',name:'น้ำผึ้ง',mentor:'ทราย',group:'Startup Pro'},
-    {id:'L017',name:'ต้า(ญ.)',mentor:'ทราย',group:'Startup Pro'},
-    {id:'L018',name:'ชาติ',mentor:'แมนยู',group:'Startup Pro'},
-    {id:'L019',name:'สกาย',mentor:'แมนยู',group:'Startup Pro'},
-    {id:'L020',name:'ปื้ด',mentor:'แมนยู',group:'Startup Pro'},
-    {id:'L021',name:'มงคล',mentor:'โบ๊ต',group:'Startup Pro'},
-    {id:'L022',name:'อิ้ง(ช)',mentor:'โบ๊ต',group:'Startup Pro'},
-    {id:'L023',name:'บ่าว',mentor:'เจ้าคุณ',group:'Startup Pro'},
-    {id:'L024',name:'เจ้าคุณ',mentor:'สิบ',group:'Protharam'},
-    {id:'L025',name:'เบียร์หลานป้า',mentor:'กาเหว่า',group:'Protharam'},
-    {id:'L026',name:'โอ๊ต',mentor:'กาเหว่า',group:'Protharam'},
-    {id:'L027',name:'ปลื้ม',mentor:'กาเหว่า',group:'Protharam'},
-    {id:'L028',name:'กิต',mentor:'กาเหว่า',group:'Protharam'},
-    {id:'L029',name:'แมนยู',mentor:'ไผ่',group:'Protharam'},
-    {id:'L030',name:'โบ๊ต',mentor:'ไผ่',group:'Protharam'},
-    {id:'L031',name:'บูม',mentor:'ไผ่',group:'Protharam'},
-    {id:'L032',name:'อิง(ญ.)',mentor:'เดียร์',group:'Protharam'},
-    {id:'L033',name:'มะตูม',mentor:'เกด',group:'Protharam'},
-  ];
-  const batch=db.batch();
-  defaults.forEach(l=>batch.set(db.collection('lambs').doc(l.id),l));
-  await batch.commit();
 }
 async function getLogs(mentor=null){
   try{
@@ -1036,38 +921,23 @@ async function getLogs(mentor=null){
     const snap=await q.get();
     const docs=snap.docs.map(d=>({...d.data(),docId:d.id}));
     return docs.sort((a,b)=>(b.ts||0)-(a.ts||0));
-  }catch(e){
-    console.error('getLogs error:',e);
-    return [];
-  }
+  }catch(e){ console.error('getLogs error:',e); return []; }
 }
 async function getLogsForLamb(lambId){
   try{
-    // ดึงข้อมูลโดยไม่ orderBy เพื่อหลีกเลี่ยงปัญหา index
     const snap=await db.collection('logs').where('lambId','==',lambId).get();
     const docs=snap.docs.map(d=>({...d.data(),docId:d.id}));
-    // sort ใน JS แทน
     return docs.sort((a,b)=>(b.ts||0)-(a.ts||0));
-  }catch(e){
-    console.error('getLogsForLamb error:',e);
-    return [];
-  }
+  }catch(e){ console.error('getLogsForLamb error:',e); return []; }
 }
-async function saveLog(data){
-  await db.collection('logs').add(data);
-}
-async function deleteLogDoc(docId){
-  await db.collection('logs').doc(docId).delete();
-}
+async function saveLog(data){ await db.collection('logs').add(data); }
+async function deleteLogDoc(docId){ await db.collection('logs').doc(docId).delete(); }
 async function getProbNotes(lambId){
   try{
     const snap=await db.collection('probNotes').where('lambId','==',lambId).get();
     const docs=snap.docs.map(d=>({...d.data(),docId:d.id}));
     return docs.sort((a,b)=>(b.ts||0)-(a.ts||0));
-  }catch(e){
-    console.error('getProbNotes error:',e);
-    return [];
-  }
+  }catch(e){ return []; }
 }
 async function saveProbNote(data){await db.collection('probNotes').add(data);}
 async function deleteProbNote(docId){await db.collection('probNotes').doc(docId).delete();}
@@ -1082,12 +952,8 @@ async function saveCurrentNoteFS(lambId,text){
 // ══════════════════════════════════════════════════════
 //  LOGIN
 // ══════════════════════════════════════════════════════
-const mentorInput=()=>document.getElementById('mentor-input');
-const pwdInput=()=>document.getElementById('pwd-input');
-
 function onNameInput(){
   const name=document.getElementById('mentor-input').value.trim();
-  // ตรวจสอบจาก MENTOR_GROUPS โดยตรง ไม่ต้องรอ Firebase
   const needPwd=name==='admin'||Object.keys(MENTOR_GROUPS).includes(name)||PASTOR_IDS.includes(name);
   const pwdLabel=document.getElementById('pwd-label');
   const pwdInput=document.getElementById('pwd-input');
@@ -1100,11 +966,7 @@ function focusPwd(){
   if(p.style.display!=='none')p.focus();else doLogin();
 }
 async function doLogin(){
-  // ฟังก์ชันนี้ถูกเรียกจาก tryLogin() เมื่อตรวจรหัสผ่านถูกต้องแล้ว
   const name=document.getElementById('mentor-input').value.trim();
-  const err=document.getElementById('login-err');
-  const btn=document.getElementById('login-btn');
-  // LAMBS hardcode แล้ว — เข้าได้ทันที ไม่รอ Firebase
   currentMentor=name; selectedLambId=null;
   sessionStorage.removeItem('ln_page');
   sessionStorage.removeItem('ln_lamb');
@@ -1112,7 +974,8 @@ async function doLogin(){
   document.getElementById('login-page').style.display='none';
   document.getElementById('app').style.display='flex';
   setupNavForUser(name);
-  btn.disabled=false; btn.textContent='เข้าสู่ระบบ';
+  document.getElementById('login-btn').disabled=false;
+  document.getElementById('login-btn').textContent='เข้าสู่ระบบ';
   showPage('log-page',document.getElementById('nav-log'));
   initApp();
 }
@@ -1131,7 +994,6 @@ function logout(){
   document.getElementById('pwd-input').value='';
   document.getElementById('pwd-input').style.display='none';
   document.getElementById('pwd-label').style.display='none';
-  document.getElementById('pwd-input').value='';
   document.getElementById('login-err').style.display='none';
   document.getElementById('login-btn').disabled=false;
   document.getElementById('login-btn').textContent='เข้าสู่ระบบ';
@@ -1147,9 +1009,7 @@ function showPage(id,btn){
   btn.classList.add('active');
   sessionStorage.setItem('ln_page',id);
   if(id==='log-page' && db)renderScheduleTable();
-  if(id==='profile-page'){
-    renderLambGrid();
-  }
+  if(id==='profile-page') renderLambGrid();
   if(id==='outreach-page')renderOutreach();
   if(id==='pastor-page')renderPastor();
   if(id==='admin-page')renderAdmin();
@@ -1166,7 +1026,6 @@ function showStab(id,btn){
 //  APP INIT
 // ══════════════════════════════════════════════════════
 function initApp(){
-  // ซ่อน/แสดง nav ให้ถูกต้องเสมอ
   setupNavForUser(currentMentor);
   const today=new Date().toISOString().split('T')[0];
   document.getElementById('f-date').value=today;
@@ -1184,11 +1043,8 @@ function initApp(){
   }
 }
 function fillLambSelect(){
-  const isPastor=PASTOR_IDS.includes(currentMentor);
-  // admin เห็นทุกคน, pastor เห็นเฉพาะลูกแกะของตัวเอง, mentor เห็นเฉพาะของตัวเอง
   let myLambs;
   if(currentMentor==='admin') myLambs=LAMBS;
-  else if(isPastor) myLambs=LAMBS.filter(l=>l.mentor===currentMentor);
   else myLambs=LAMBS.filter(l=>l.mentor===currentMentor);
   const sel=document.getElementById('f-lamb');
   sel.innerHTML=myLambs.map(l=>`<option value="${l.id}">${l.name}</option>`).join('');
@@ -1282,7 +1138,6 @@ async function addLog(){
     dur:parseFloat(document.getElementById('f-dur').value)||1,
     ts:Date.now()
   });
-  // reset form หลังบันทึก
   document.getElementById('f-note').value='';
   document.getElementById('f-lset').value='';
   document.getElementById('f-lsec').innerHTML='<option value="">-- เลือกบท --</option>';
@@ -1290,13 +1145,9 @@ async function addLog(){
   document.getElementById('lesson-row').style.display=content==='สอนบทเรียน'?'flex':'none';
   btn.disabled=false;btn.textContent='+ บันทึก';
   showToast('✓ บันทึกแล้ว');
-  // set selectedLambId เสมอ และ save ใน session
   selectedLambId=lambId;
   sessionStorage.setItem('ln_lamb',lambId);
-  // ถ้ากำลังดูประวัติลูกแกะคนนั้นอยู่ → refresh ทันที
-  if(document.getElementById('profile-page').classList.contains('active')){
-    renderLambGrid();
-  }
+  if(document.getElementById('profile-page').classList.contains('active')) renderLambGrid();
 }
 async function adminAddLog(){
   const mentor=document.getElementById('af-mentor').value;
@@ -1324,26 +1175,17 @@ async function adminAddLog(){
 // ══════════════════════════════════════════════════════
 function renderLambGrid(){
   const isPastor=PASTOR_IDS.includes(currentMentor);
-  // pastor เห็นเฉพาะลูกแกะของตัวเอง, admin เห็นทั้งหมด, mentor เห็นของตัวเอง
   let myLambs;
   if(currentMentor==='admin') myLambs=LAMBS;
   else myLambs=LAMBS.filter(l=>l.mentor===currentMentor);
-
   document.getElementById('lamb-grid').innerHTML=myLambs.length
     ? myLambs.map(l=>`<button class="lamb-btn ${l.id===selectedLambId?'active':''}" onclick="selectLamb('${l.id}',this)">${l.name}</button>`).join('')
     : '<div style="color:var(--text3);font-size:13px;padding:8px">ยังไม่มีลูกแกะ</div>';
-
-  // แสดง/ซ่อน pastor manage card
   const manageCard=document.getElementById('pastor-lamb-manage-card');
   if(manageCard) manageCard.style.display=isPastor?'block':'none';
   if(isPastor) renderPastorLambManage();
-
-  if(selectedLambId && myLambs.find(l=>l.id===selectedLambId)){
-    renderLambDetail(selectedLambId);
-  } else {
-    document.getElementById('lamb-detail').style.display='none';
-    selectedLambId=null;
-  }
+  if(selectedLambId && myLambs.find(l=>l.id===selectedLambId)) renderLambDetail(selectedLambId);
+  else { document.getElementById('lamb-detail').style.display='none'; selectedLambId=null; }
 }
 async function selectLamb(id,btn){
   selectedLambId=id;
@@ -1368,7 +1210,6 @@ async function renderLambDetail(lambId){
     <div class="stat-card"><div class="stat-val">${uniqueLessons}</div><div class="stat-label">บทที่เรียนแล้ว</div></div>
     <div class="stat-card"><div class="stat-val">${allLogs.length?formatDate(allLogs[allLogs.length-1].date):'—'}</div><div class="stat-label">ครั้งแรก</div></div>
   `;
-  // render all sub-sections with the already-fetched logs
   renderLessons(allLogs);
   renderHistory(allLogs);
   renderCounsel(allLogs);
@@ -1463,7 +1304,6 @@ async function saveCurrentNote(){
 async function renderAdmin(){
   fillAdminMentorSelect();
   refreshAdminLambSelect();
-  // pastor ซ่อนส่วนลบลูกแกะ
   const delSection=document.getElementById('manage-delete-section');
   if(delSection)delSection.style.display=(currentMentor==='admin')?'block':'none';
   const allLogs=await getLogs();
@@ -1503,15 +1343,13 @@ function getDateKey(date,type){
   if(type==='monthly')return date?date.substring(0,7):'';
   return date?date.substring(0,4):'';
 }
-// กรองเฉพาะพี่เลี้ยงจริง (ไม่รวม pastor/admin)
 function getMentorLogs(allLogs){
   return allLogs.filter(l=>DEFAULT_MENTORS.includes(l.mentor)&&!PASTOR_IDS.includes(l.mentor));
 }
 function getWeekDays(){
-  // เริ่มจันทร์ของสัปดาห์ปัจจุบัน
   const now=new Date();
-  const day=now.getDay(); // 0=อา, 1=จ, ..., 6=ส
-  const diff=day===0?-6:1-day; // offset ให้ได้วันจันทร์
+  const day=now.getDay();
+  const diff=day===0?-6:1-day;
   const mon=new Date(now);mon.setDate(now.getDate()+diff);
   const days=[];
   for(let i=0;i<7;i++){
@@ -1524,13 +1362,10 @@ function renderAdminChart(type,allLogs){
   const now=new Date();
   const chartEl=document.getElementById('admin-chart');
   if(chartMode==='mentor'){
-    // แยกรายพี่เลี้ยง — weekly = ตาราง 7 วัน แสดงชื่อ
     if(type==='weekly'){
-      // สร้าง 7 วัน
-      const days=getWeekDays(); // จันทร์→อาทิตย์
+      const days=getWeekDays();
       const dayMentors={};
       days.forEach(d=>{dayMentors[d]=new Set();});
-      // กรองเฉพาะพี่เลี้ยง (ไม่รวม pastor)
       getMentorLogs(allLogs).forEach(l=>{if(dayMentors.hasOwnProperty(l.date)&&l.mentor)dayMentors[l.date].add(l.mentor);});
       const DAY_TH=['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
       chartEl.innerHTML=`
@@ -1561,7 +1396,6 @@ function renderAdminChart(type,allLogs){
         </div>
         <div style="font-size:11px;color:var(--text2);margin-top:8px">* แสดงพี่เลี้ยงที่มีบันทึกในแต่ละวัน</div>`;
     } else {
-      // monthly/yearly — bar chart แยกรายพี่เลี้ยง
       const filteredLogs=allLogs.filter(l=>{
         if(!l.date)return false;
         if(type==='monthly')return l.date.substring(0,7)===now.getFullYear()+'-'+(now.getMonth()+1).toString().padStart(2,'0');
@@ -1583,9 +1417,8 @@ function renderAdminChart(type,allLogs){
         }).join('');
     }
   } else {
-    // รวมทั้งหมด — weekly = ตาราง 7 วัน แสดงจำนวนชม.
     if(type==='weekly'){
-      const days=getWeekDays(); // จันทร์→อาทิตย์
+      const days=getWeekDays();
       const dayHrs={};days.forEach(d=>{dayHrs[d]=0;});
       getMentorLogs(allLogs).forEach(l=>{if(dayHrs.hasOwnProperty(l.date))dayHrs[l.date]+=(l.dur||0);});
       const DAY_TH=['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
@@ -1616,7 +1449,6 @@ function renderAdminChart(type,allLogs){
     } else {
       let groups={};
       if(type==='monthly'){
-        // ม.ค.→ธ.ค. ของปีปัจจุบัน
         const yr=now.getFullYear();
         const MONTH_TH=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
         for(let m=1;m<=12;m++){const k=yr+'-'+String(m).padStart(2,'0');groups[k]=0;}
@@ -1633,7 +1465,6 @@ function renderAdminChart(type,allLogs){
           </div>`;
         }).join('');
       }else if(type==='quarterly'){
-        // รายไตรมาส ปีปัจจุบัน
         const yr=now.getFullYear();
         const quarters={'Q1 (ม.ค.–มี.ค.)':[1,2,3],'Q2 (เม.ย.–มิ.ย.)':[4,5,6],'Q3 (ก.ค.–ก.ย.)':[7,8,9],'Q4 (ต.ค.–ธ.ค.)':[10,11,12]};
         const qData={};Object.keys(quarters).forEach(q=>{qData[q]=0;});
@@ -1704,22 +1535,19 @@ async function adminAddLamb(){
   const mentor=document.getElementById('new-lamb-mentor').value;
   const group=MENTOR_GROUPS[mentor]||document.getElementById('new-lamb-group').value;
   if(!name||!mentor){showToast('กรุณากรอกชื่อและเลือกพี่เลี้ยง');return;}
-  const newId='L'+Date.now(); // unique timestamp ID
+  const newId='L'+Date.now();
   const newLamb={id:newId,name:name,mentor:mentor,group:group};
   try{
     await db.collection('lambs').doc(newId).set(newLamb);
     LAMBS.push(newLamb);
     LAMBS.sort((a,b)=>a.name.localeCompare(b.name,'th'));
     document.getElementById('new-lamb-name').value='';
-    // re-render ทุกส่วนที่ใช้ LAMBS
     renderAdminLambManage();
     fillLambSelect();
     refreshAdminLambSelect();
-    renderAdmin(); // refresh ตาราง mentor summary ด้วย
+    renderAdmin();
     showToast('✓ เพิ่ม '+name+' ('+mentor+') แล้ว');
-  }catch(e){
-    showToast('❌ เพิ่มไม่ได้: '+e.message);
-  }
+  }catch(e){ showToast('❌ เพิ่มไม่ได้: '+e.message); }
 }
 async function adminDeleteLamb(id,name){
   if(!confirm('ลบลูกแกะ "'+name+'" ออกจากระบบ?\n(บันทึกที่มีอยู่จะยังคงอยู่)'))return;
@@ -1731,16 +1559,13 @@ async function adminDeleteLamb(id,name){
     refreshAdminLambSelect();
     renderAdmin();
     showToast('✓ ลบ '+name+' แล้ว');
-  }catch(e){
-    showToast('❌ ลบไม่ได้: '+e.message);
-  }
+  }catch(e){ showToast('❌ ลบไม่ได้: '+e.message); }
 }
 
 // ══════════════════════════════════════════════════════
-//  UTILS
+//  SCHEDULE
 // ══════════════════════════════════════════════════════
-// ── SCHEDULE ──
-let scheduleDay=null; // วันที่กำลังเพิ่มนัด
+let scheduleDay=null;
 
 async function renderScheduleTable(){
   const days=getWeekDays();
@@ -1754,38 +1579,27 @@ async function renderScheduleTable(){
   const wrap=document.getElementById('schedule-table-wrap');
   if(!wrap)return;
 
-  // โหลด schedules จาก db (ถ้า db พร้อม)
   let schedules=[];
   let outreachList=[];
   if(db){
     try{
-      const snap=await db.collection('schedules')
-        .where('mentor','==',currentMentor).get();
-      schedules=snap.docs.map(d=>({...d.data(),docId:d.id}))
-        .filter(s=>days.includes(s.date));
+      const snap=await db.collection('schedules').where('mentor','==',currentMentor).get();
+      schedules=snap.docs.map(d=>({...d.data(),docId:d.id})).filter(s=>days.includes(s.date));
     }catch(e){ console.error('schedule load:',e); }
     try{
-      const orSnap=await db.collection('outreach')
-        .where('mentor','==',currentMentor).get();
+      const orSnap=await db.collection('outreach').where('mentor','==',currentMentor).get();
       const seen={};
       orSnap.docs.forEach(d=>{
         const data=d.data();
-        // ใช้ชื่อเล่นหรือชื่อจริงเป็น key dedup
         const displayName=data.nick||data.fname||'?';
         if(!seen[displayName]){
           seen[displayName]=true;
-          outreachList.push({
-            id:d.id,           // docId ของ outreach
-            nick:data.nick||'',
-            fname:data.fname||'',
-            displayName:displayName
-          });
+          outreachList.push({id:d.id,nick:data.nick||'',fname:data.fname||'',displayName:displayName});
         }
       });
     }catch(e){ console.error('outreach load:',e); }
   }
 
-  // สร้าง thead — 7 คอลัมน์ จ.ถึงอา. ไม่มีคอลัมน์ "วัน"
   let thead='<tr>';
   days.forEach(d=>{
     const dow=new Date(d+'T00:00:00').getDay();
@@ -1794,7 +1608,6 @@ async function renderScheduleTable(){
   });
   thead+='</tr>';
 
-  // สร้าง tbody — แถวเดียว 7 คอลัมน์
   let cells='';
   days.forEach(d=>{
     const isToday=d===todayStr;
@@ -1818,7 +1631,6 @@ async function renderScheduleTable(){
   });
 
   wrap.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:500px"><thead>${thead}</thead><tbody><tr>${cells}</tr></tbody></table>`;
-
   fillScheduleDropdowns(outreachList);
 }
 
@@ -1838,17 +1650,13 @@ function fillScheduleDropdowns(outreachList){
     }
   }
 }
-
 function openScheduleModal(day){
   scheduleDay=day;
   document.getElementById('schedule-modal-title').textContent=`➕ เพิ่มนัดหมาย — ${formatDate(day)}`;
   document.getElementById('schedule-modal').style.display='block';
   document.getElementById('sch-note').value='';
 }
-function closeScheduleModal(){
-  document.getElementById('schedule-modal').style.display='none';
-  scheduleDay=null;
-}
+function closeScheduleModal(){ document.getElementById('schedule-modal').style.display='none'; scheduleDay=null; }
 function onSchTypeChange(){
   const type=document.getElementById('sch-type').value;
   document.getElementById('sch-lamb-group').style.display=type==='lamb'?'':'none';
@@ -1864,22 +1672,15 @@ async function saveSchedule(){
     personName=sel.options[sel.selectedIndex]?.dataset?.name||sel.options[sel.selectedIndex]?.text||'';
   } else {
     const sel=document.getElementById('sch-new-sel');
-    personId=sel.value; // docId ของ outreach record ล่าสุด
+    personId=sel.value;
     personName=sel.options[sel.selectedIndex]?.dataset?.name||sel.options[sel.selectedIndex]?.text||'';
   }
   if(!personName)return;
   const note=document.getElementById('sch-note').value.trim();
-
-  // บันทึกนัดหมาย
   const schedRef=await db.collection('schedules').add({
-    mentor:currentMentor,date:scheduleDay,type,personId,personName,note,ts:Date.now(),
-    fromSchedule:true
+    mentor:currentMentor,date:scheduleDay,type,personId,personName,note,ts:Date.now(),fromSchedule:true
   });
-
-  // ถ้าเป็นคนใหม่ → สร้าง outreach visit อัตโนมัติและเชื่อมกับ schedule
   if(type==='new'&&personName){
-    // personId คือ docId ของ outreach record เดิม (จาก fillScheduleDropdowns)
-    // ดึงข้อมูลพื้นฐานจาก record นั้น
     let baseData={nick:personName,fname:'',job:'',contact:'',status:'กลาง'};
     if(personId){
       try{
@@ -1887,26 +1688,14 @@ async function saveSchedule(){
         if(baseDoc.exists) baseData={...baseData,...baseDoc.data()};
       }catch(e){}
     }
-
-    // สร้าง visit ใหม่ใน outreach (เป็นการบันทึกการเยี่ยมครั้งนี้)
     const orRef=await db.collection('outreach').add({
-      mentor:currentMentor,
-      nick:baseData.nick||personName,
-      fname:baseData.fname||'',
-      job:baseData.job||'',
-      contact:baseData.contact||'',
-      status:baseData.status||'กลาง',
-      dur:1,
-      note:note||'นัดหมายจากตารางสัปดาห์',
-      date:scheduleDay,
-      ts:Date.now(),
-      isScheduleVisit:true,
-      linkedScheduleId:schedRef.id
+      mentor:currentMentor,nick:baseData.nick||personName,fname:baseData.fname||'',
+      job:baseData.job||'',contact:baseData.contact||'',status:baseData.status||'กลาง',
+      dur:1,note:note||'นัดหมายจากตารางสัปดาห์',date:scheduleDay,ts:Date.now(),
+      isScheduleVisit:true,linkedScheduleId:schedRef.id
     });
-    // อัปเดต schedule ให้รู้ linkedOrId → ใช้ตอนลบ
     await db.collection('schedules').doc(schedRef.id).update({linkedOrId:orRef.id});
   }
-
   closeScheduleModal();
   await renderScheduleTable();
 }
@@ -1914,11 +1703,9 @@ async function deleteSchedule(docId){
   try{
     const schedDoc=await db.collection('schedules').doc(docId).get();
     const schedData=schedDoc.exists?schedDoc.data():{};
-    // ถ้าเป็นนัดคนใหม่และมี outreach visit เชื่อมอยู่
     if(schedData.type==='new'&&schedData.linkedOrId){
       const delVisit=confirm('ลบนัดหมายนี้?\n\n✓ OK = ลบนัดและประวัติการเยี่ยมด้วย\n✕ Cancel = ยกเลิก');
       if(!delVisit)return;
-      // ลบ outreach visit ด้วย
       await db.collection('outreach').doc(schedData.linkedOrId).delete();
     } else {
       if(!confirm('ลบนัดหมายนี้?'))return;
@@ -1930,7 +1717,9 @@ async function deleteSchedule(docId){
   await renderScheduleTable();
 }
 
-// ── OUTREACH ──
+// ══════════════════════════════════════════════════════
+//  OUTREACH
+// ══════════════════════════════════════════════════════
 async function saveOutreach(){
   const nick=document.getElementById('or-nick').value.trim();
   const fname=document.getElementById('or-fname').value.trim();
@@ -1941,8 +1730,7 @@ async function saveOutreach(){
   btn.disabled=true;btn.textContent='กำลังบันทึก...';
   const bday=document.getElementById('or-bday').value||'';
   await db.collection('outreach').add({
-    mentor:currentMentor,
-    fname,nick,
+    mentor:currentMentor,fname,nick,
     job:document.getElementById('or-job').value.trim(),
     contact:document.getElementById('or-contact').value.trim(),
     status:document.getElementById('or-status').value,
@@ -1950,25 +1738,21 @@ async function saveOutreach(){
     note:document.getElementById('or-note').value.trim(),
     date,bday,ts:Date.now()
   });
-  // reset form
   ['or-fname','or-nick','or-job','or-contact','or-note','or-bday'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('or-dur').value='1';
   btn.disabled=false;btn.textContent='+ บันทึก';
   showToast('✓ บันทึกคนใหม่แล้ว');
   await renderOutreach();
 }
-let selectedOrPerson=null; // docId ของคนใหม่ที่เลือก
-
-let orPersonsCache=[]; // เก็บ persons data ไว้ใน JS
-let outreachCache=null; // cache ข้อมูล outreach ทั้งหมด
+let selectedOrPerson=null;
+let orPersonsCache=[];
+let outreachCache=null;
 
 async function renderOutreach(){
   try{
     const snap=await db.collection('outreach').where('mentor','==',currentMentor).get();
     const docs=snap.docs.map(d=>({...d.data(),docId:d.id})).sort((a,b)=>(b.ts||0)-(a.ts||0));
-    outreachCache=docs; // อัปเดต cache
-    document.getElementById('or-count').textContent=`(${docs.length} รายการ / `;
-
+    outreachCache=docs;
     if(!docs.length){
       document.getElementById('or-person-grid').innerHTML='';
       document.getElementById('or-empty').style.display='block';
@@ -1978,14 +1762,11 @@ async function renderOutreach(){
     }
     document.getElementById('or-empty').style.display='none';
 
-    // กลุ่มตามชื่อ (nick เป็น primary key)
     const personMap={};
     docs.forEach(d=>{
       const key=(d.nick||d.fname||'ไม่ระบุชื่อ');
       if(!personMap[key]) personMap[key]={nick:d.nick,fname:d.fname,job:d.job,contact:d.contact,bday:d.bday||'',visits:[]};
-      // อัปเดต bday ถ้ามีข้อมูล
       if(d.bday) personMap[key].bday=d.bday;
-      // อัปเดตข้อมูลพื้นฐานถ้ามีใหม่กว่า
       if(d.job) personMap[key].job=d.job;
       if(d.contact) personMap[key].contact=d.contact;
       if(d.fname) personMap[key].fname=d.fname;
@@ -1993,15 +1774,11 @@ async function renderOutreach(){
     });
     orPersonsCache=Object.values(personMap);
 
-    // สถิติรวม
     const totalHrsAll=docs.reduce((a,d)=>a+(d.dur||0),0);
     document.getElementById('or-count').textContent=
       `${orPersonsCache.length} คน | ${docs.length} ครั้ง | ${totalHrsAll.toFixed(1)} ชม.`;
 
-    const statusColor={'เปิดใจ':'badge-green','กลาง':'badge-amber','ยังไม่พร้อม':'badge-red','ผู้เชื่อแล้ว':'badge-blue'};
     const statusBorder={'เปิดใจ':'var(--green)','ผู้เชื่อแล้ว':'var(--blue)','ยังไม่พร้อม':'var(--red)','กลาง':'var(--amber)'};
-
-    // ปุ่มรายชื่อ
     document.getElementById('or-person-grid').innerHTML=orPersonsCache.map((p,i)=>{
       const sorted=[...p.visits].sort((a,b)=>(b.ts||0)-(a.ts||0));
       const latestStatus=sorted[0]?.status||'';
@@ -2013,9 +1790,7 @@ async function renderOutreach(){
       </button>`;
     }).join('');
 
-    // สรุปรวม
     renderOrSummaryAll();
-    // ถ้ามีที่เลือกไว้แล้ว refresh detail
     if(selectedOrPerson!==null && orPersonsCache[selectedOrPerson]){
       renderOrDetail(orPersonsCache[selectedOrPerson]);
     }
@@ -2029,7 +1804,6 @@ function selectOrPerson(idx,btn){
   const person=orPersonsCache[idx];
   if(person){
     renderOrDetail(person);
-    // reset stab
     const firstStab=document.querySelector('#outreach-page .stab');
     if(firstStab) showOrStab('or-visits',firstStab);
   }
@@ -2042,9 +1816,29 @@ function showOrStab(id,btn){
   document.querySelectorAll('#outreach-page .stab').forEach(b=>b.classList.remove('active'));
   document.getElementById(id).style.display='block';
   btn.classList.add('active');
-  if(id==='or-person-notes'&&selectedOrPerson!==null){
-    loadOrPersonNote();
-  }
+  if(id==='or-person-notes'&&selectedOrPerson!==null) loadOrPersonNote();
+}
+
+// ✅ FIX: อัปเดตวันเกิดของคนใหม่
+async function updateOrBday(bday){
+  if(selectedOrPerson===null)return;
+  const person=orPersonsCache[selectedOrPerson];
+  if(!person)return;
+  // อัปเดตทุก visit ของคนนี้ที่มีข้อมูล bday
+  try{
+    const batch=db.batch();
+    person.visits.forEach(v=>{
+      batch.update(db.collection('outreach').doc(v.docId),{bday});
+    });
+    await batch.commit();
+    person.bday=bday;
+    // แสดงอายุ
+    const age=calcAge(bday);
+    const ageEl=document.getElementById('or-age-display');
+    if(ageEl) ageEl.textContent=age!==''?`(${age} ปี)`:'';
+    showToast('✓ บันทึกวันเกิดแล้ว');
+    renderOrSummaryAll(); // refresh ตารางด้วย
+  }catch(e){ showToast('❌ บันทึกไม่ได้'); }
 }
 
 function renderOrDetail(person){
@@ -2065,6 +1859,17 @@ function renderOrDetail(person){
     <div class="stat-card"><div class="stat-val">${formatDate(person.visits[person.visits.length-1]?.date)}</div><div class="stat-label">พบครั้งแรก</div></div>
     <div class="stat-card"><div class="stat-val">${formatDate(latestVisit?.date)}</div><div class="stat-label">พบล่าสุด</div></div>
   `;
+
+  // ✅ แสดงช่องวันเกิดและอายุ
+  const bdayEdit=document.getElementById('or-bday-edit');
+  if(bdayEdit){
+    const bday=person.bday||latestVisit?.bday||'';
+    bdayEdit.value=bday;
+    const age=calcAge(bday);
+    const ageEl=document.getElementById('or-age-display');
+    if(ageEl) ageEl.textContent=age!==''?`(${age} ปี)`:'(ยังไม่มีข้อมูล)';
+  }
+
   // render ประวัติ
   const tbody=document.getElementById('or-visit-tbody');
   if(!person.visits.length){tbody.innerHTML='';document.getElementById('or-visit-empty').style.display='block';return;}
@@ -2084,15 +1889,15 @@ function renderOrDetail(person){
     <td>
       <input type="text" value="${escapeAttr(v.note||'')}" 
         onchange="updateOrVisitNote('${v.docId}',this.value)"
-        style="width:100%;padding:3px 6px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;font-family:inherit"
-        placeholder="โน้ต...">
+        style="width:100%;min-width:140px;padding:3px 6px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;font-family:inherit"
+        placeholder="โน้ต / คอมเมนต์...">
     </td>
     <td><button class="btn btn-danger btn-sm" onclick="deleteOutreach('${v.docId}')">ลบ</button></td>
   </tr>`).join('');
-  // โน้ตรายคน
   loadOrPersonNote();
 }
 
+// ✅ FIX 2: renderOrSummaryAll เพิ่มคอลัมน์อายุ
 function renderOrSummaryAll(){
   if(!orPersonsCache.length) return;
   const statusColor={'เปิดใจ':'badge-green','กลาง':'badge-amber','ยังไม่พร้อม':'badge-red','ผู้เชื่อแล้ว':'badge-blue'};
@@ -2112,10 +1917,13 @@ function renderOrSummaryAll(){
     const sorted=[...p.visits].sort((a,b)=>(b.ts||0)-(a.ts||0));
     const st=sorted[0]?.status||'';
     const hrs=p.visits.reduce((a,v)=>a+(v.dur||0),0);
-    const ageTxt=calcAge(p.bday||sorted[0]?.bday||'');
+    // ✅ คำนวณอายุจาก bday ของ person หรือ visit
+    const bday=p.bday||sorted[0]?.bday||'';
+    const age=calcAge(bday);
+    const ageTxt=age!==''?`<span class="age-badge">${age} ปี</span>`:'<span style="color:var(--text3);font-size:11px">-</span>';
     return`<tr style="cursor:pointer" onclick="selectOrPersonFromTable(${i})">
       <td><strong>${p.nick||p.fname||'?'}</strong>${p.fname&&p.nick?' ('+p.fname+')':''}</td>
-      <td style="text-align:center;color:var(--text2);font-size:13px">${ageTxt!==''?ageTxt+' ปี':'-'}</td>
+      <td style="text-align:center">${ageTxt}</td>
       <td style="text-align:center">${p.visits.length}</td>
       <td style="text-align:center">${hrs.toFixed(1)}</td>
       <td><span class="badge ${statusColor[st]||'badge-warm'}">${st}</span></td>
@@ -2123,14 +1931,13 @@ function renderOrSummaryAll(){
     </tr>`;
   }).join('');
 }
+
 function selectOrPersonFromTable(idx){
   selectedOrPerson=idx;
-  // highlight ปุ่มด้วย
   document.querySelectorAll('#or-person-grid .lamb-btn').forEach((b,i)=>{
     b.classList.toggle('active',i===idx);
   });
   renderOrDetail(orPersonsCache[idx]);
-  // scroll ไปที่ detail
   document.getElementById('or-detail').scrollIntoView({behavior:'smooth'});
   const firstStab=document.querySelector('#outreach-page .stab');
   if(firstStab) showOrStab('or-visits',firstStab);
@@ -2139,15 +1946,12 @@ function selectOrPersonFromTable(idx){
 function escapeAttr(s){return(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function buildStatusOptions(current){
   return ['เปิดใจ','กลาง','ยังไม่พร้อม','ผู้เชื่อแล้ว']
-    .map(s=>'<option value="'+s+'"'+(current===s?' selected':'')+'>'+s+'</option>')
-    .join('');
+    .map(s=>'<option value="'+s+'"'+(current===s?' selected':'')+'>'+s+'</option>').join('');
 }
 async function updateOrVisitStatus(docId,val){
   await db.collection('outreach').doc(docId).update({status:val});
   showToast('✓ อัปเดตสถานะแล้ว');
-  // refresh detail
   if(selectedOrPerson!==null&&orPersonsCache[selectedOrPerson]){
-    // อัปเดต cache ด้วย
     orPersonsCache[selectedOrPerson].visits.forEach(v=>{if(v.docId===docId)v.status=val;});
     renderOrDetail(orPersonsCache[selectedOrPerson]);
   }
@@ -2170,7 +1974,6 @@ async function updateOrVisitNote(docId,val){
 
 async function loadOrPersonNote(){
   if(selectedOrPerson===null)return;
-  // ใช้ชื่อเป็น key สำหรับ note
   const grid=document.getElementById('or-person-grid');
   const activeName=grid.querySelector('.lamb-btn.active')?.textContent||'';
   try{
@@ -2236,22 +2039,18 @@ function periodLabel(period){
 }
 async function renderAdminOutreach(){
   try{
-    // fill mentor filter
     const mf=document.getElementById('or-filter-mentor');
     if(mf&&mf.options.length<=1){
       DEFAULT_MENTORS.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;mf.appendChild(o);});
     }
     const mentorFilter=document.getElementById('or-filter-mentor')?.value||'';
     const period=document.getElementById('or-filter-period')?.value||'all';
-    // update label
     const lbl=document.getElementById('or-period-label');
     if(lbl)lbl.textContent=periodLabel(period);
-
     const snap=await db.collection('outreach').get();
     let docs=snap.docs.map(d=>({...d.data(),docId:d.id})).sort((a,b)=>(b.ts||0)-(a.ts||0));
     if(mentorFilter)docs=docs.filter(d=>d.mentor===mentorFilter);
     docs=filterByPeriod(docs,period);
-
     const tbody=document.getElementById('admin-or-tbody');
     if(!docs.length){tbody.innerHTML='';document.getElementById('admin-or-empty').style.display='block';return;}
     document.getElementById('admin-or-empty').style.display='none';
@@ -2276,7 +2075,9 @@ async function adminDeleteOutreach(docId){
   await renderAdminOutreach();
 }
 
-// ── CHART MODE ──
+// ══════════════════════════════════════════════════════
+//  CHART MODE
+// ══════════════════════════════════════════════════════
 let chartMode='total';
 function setChartMode(mode,btn){
   chartMode=mode;
@@ -2285,7 +2086,9 @@ function setChartMode(mode,btn){
   getLogs().then(logs=>renderAdminChart(currentAdminChart,logs));
 }
 
-// ── PASTOR PAGE ──
+// ══════════════════════════════════════════════════════
+//  PASTOR PAGE
+// ══════════════════════════════════════════════════════
 let pastorChartMode='total';
 let currentPastorChart='weekly';
 
@@ -2302,14 +2105,10 @@ async function renderPastor(){
   renderPastorChart(currentPastorChart,allLogs);
   renderPastorOutreach();
   renderPastorLambManage();
-  fillPastorMentorSelect();
-  // กราฟแท่งพี่เลี้ยงรายเดือน
   initMentorBarMonthSelect();
   renderMentorBarChart();
   renderEvangelistRanking();
 }
-function fillPastorMentorSelect(){ /* ไม่ต้องใช้แล้ว */ }
-function pastorAutoFillGroup(){ /* ไม่ต้องใช้แล้ว */ }
 function renderPastorMentors(allLogs){
   const now=new Date();
   const weekStart=new Date(now);weekStart.setDate(now.getDate()-now.getDay());
@@ -2325,17 +2124,10 @@ async function renderEvangelistRanking(){
   const period=document.getElementById('evang-period')?document.getElementById('evang-period').value:'month';
   const wrap=document.getElementById('evang-chart');
   if(!wrap)return;
-
-  // ดึง outreach ทั้งหมด
   var docs=[];
   try{
-    if(db){
-      const snap=await db.collection('outreach').get();
-      docs=snap.docs.map(function(d){return d.data();});
-    }
+    if(db){ const snap=await db.collection('outreach').get(); docs=snap.docs.map(function(d){return d.data();}); }
   }catch(e){console.error(e);}
-
-  // กรองช่วงเวลา
   const now=new Date();
   const yr=now.getFullYear();
   const mo=now.getMonth();
@@ -2343,46 +2135,30 @@ async function renderEvangelistRanking(){
     if(!d.date)return false;
     const dt=new Date(d.date+'T00:00:00');
     if(period==='month') return dt.getFullYear()===yr && dt.getMonth()===mo;
-    if(period==='quarter'){
-      const q=Math.floor(mo/3);
-      return dt.getFullYear()===yr && Math.floor(dt.getMonth()/3)===q;
-    }
+    if(period==='quarter'){const q=Math.floor(mo/3);return dt.getFullYear()===yr && Math.floor(dt.getMonth()/3)===q;}
     if(period==='year') return dt.getFullYear()===yr;
-    return true; // all
+    return true;
   });
-
-  // ไม่รวม ธีระ และ admin
   const EXCLUDE=['ธีระ','admin'];
   const mentors=DEFAULT_MENTORS.filter(function(m){return !EXCLUDE.includes(m);});
-
-  // นับรายการคนใหม่ต่อพี่เลี้ยง (unique nick)
   var data=mentors.map(function(m){
     var mDocs=docs.filter(function(d){return d.mentor===m;});
-    // นับ unique ด้วย nick
     var uniqueNames={};
     mDocs.forEach(function(d){uniqueNames[d.nick||d.fname||'?']=true;});
     return {name:m,count:mDocs.length,unique:Object.keys(uniqueNames).length};
   }).sort(function(a,b){return b.unique-a.unique;});
-
   var maxVal=Math.max.apply(null,data.map(function(d){return d.unique;}).concat([1]));
   var medals=['🥇','🥈','🥉'];
   var colors=['#c8860a','#8b7355','#6b9e6b','#5b8db8','#c87070','#7b6bc4','#c4926b','#5da8a8'];
   var periodTH={month:'เดือนนี้',quarter:'ไตรมาสนี้',year:'ปีนี้',all:'ทั้งหมด'};
-
   var html='<div style="font-size:12px;color:var(--text3);margin-bottom:10px">'+periodTH[period]+' · นับจำนวนคนใหม่ที่แต่ละพี่เลี้ยงแนะนำ (unique)</div>';
-
-  // Top 3 highlight
   if(data[0]&&data[0].unique>0){
-
     html+='<div style="background:linear-gradient(135deg,#fff8e8,#fef3d0);border:1px solid #e8c860;border-radius:12px;padding:14px;margin-bottom:14px;text-align:center">'
       +'<div style="font-size:22px">🏆</div>'
       +'<div style="font-weight:700;font-size:16px;color:var(--warm)">'+data[0].name+'</div>'
       +'<div style="font-size:13px;color:var(--text2);margin:2px 0">'+data[0].unique+' คน ใน'+periodTH[period]+'</div>'
-
       +'</div>';
   }
-
-  // Bar chart ทุกคน
   data.forEach(function(d,i){
     var pct=maxVal>0?(d.unique/maxVal*100):0;
     var medal=i<3?medals[i]:'';
@@ -2398,13 +2174,11 @@ async function renderEvangelistRanking(){
     }
     html+='</div></div>';
   });
-
   if(data.every(function(d){return d.unique===0;})){
     html+='<div style="text-align:center;color:var(--text3);font-size:13px;padding:16px">ยังไม่มีบันทึกคนใหม่ในช่วงนี้</div>';
   }
   wrap.innerHTML=html;
 }
-
 function initMentorBarMonthSelect(){
   const sel=document.getElementById('mentor-bar-month');
   if(!sel)return;
@@ -2418,7 +2192,6 @@ function initMentorBarMonthSelect(){
   }
   sel.innerHTML=opts.join('');
 }
-
 async function renderMentorBarChart(){
   const sel=document.getElementById('mentor-bar-month');
   const unitSel=document.getElementById('mentor-bar-unit');
@@ -2429,15 +2202,10 @@ async function renderMentorBarChart(){
   const parts=ym.split('-');
   const yr=parseInt(parts[0]);
   const mo=parseInt(parts[1]);
-
   let allLogs=[];
   try{
-    if(db){
-      const snap=await db.collection('logs').get();
-      allLogs=snap.docs.map(d=>d.data());
-    }
+    if(db){ const snap=await db.collection('logs').get(); allLogs=snap.docs.map(d=>d.data()); }
   }catch(e){console.error(e);}
-
   const PASTOR_LOCAL=['ธีระ'];
   const monthLogs=allLogs.filter(function(l){
     if(PASTOR_LOCAL.includes(l.mentor))return false;
@@ -2445,25 +2213,17 @@ async function renderMentorBarChart(){
     const d=new Date(l.date+'T00:00:00');
     return d.getFullYear()===yr && d.getMonth()+1===mo;
   });
-
   const mentors=DEFAULT_MENTORS.filter(function(m){return !PASTOR_LOCAL.includes(m);});
   const data=mentors.map(function(m){
-    const hrs=monthLogs.filter(function(l){return l.mentor===m;})
-      .reduce(function(a,l){return a+(l.dur||0);},0);
+    const hrs=monthLogs.filter(function(l){return l.mentor===m;}).reduce(function(a,l){return a+(l.dur||0);},0);
     return {name:m,hrs:hrs};
   }).sort(function(a,b){return b.hrs-a.hrs;});
-
   const maxVal=Math.max.apply(null,data.map(function(d){return unit==='days'?d.hrs/8:d.hrs;}).concat([0.1]));
   const colors=['#c8860a','#8b7355','#6b9e6b','#5b8db8','#c87070','#7b6bc4','#c4926b','#5da8a8'];
   const MONTH_TH=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
   const medals=['🥇','🥈','🥉'];
-
-  let html='<div style="font-size:12px;color:var(--text3);margin-bottom:8px">'
-    +MONTH_TH[mo-1]+' '+yr+' · '+(unit==='hrs'?'หน่วย: ชั่วโมง':'หน่วย: วัน (8ชม.=1วัน)')
-    +'</div>';
-
+  let html='<div style="font-size:12px;color:var(--text3);margin-bottom:8px">'+MONTH_TH[mo-1]+' '+yr+' · '+(unit==='hrs'?'หน่วย: ชั่วโมง':'หน่วย: วัน (8ชม.=1วัน)')+'</div>';
   var allZero=data.every(function(d){return d.hrs===0;});
-
   data.forEach(function(d,i){
     var val=unit==='days'?d.hrs/8:d.hrs;
     var pct=maxVal>0?(val/maxVal*100):0;
@@ -2483,14 +2243,9 @@ async function renderMentorBarChart(){
     }
     html+='</div></div>';
   });
-
-  if(allZero){
-    html+='<div style="text-align:center;color:var(--text3);font-size:13px;padding:16px">ยังไม่มีบันทึกในเดือนนี้</div>';
-  }
+  if(allZero) html+='<div style="text-align:center;color:var(--text3);font-size:13px;padding:16px">ยังไม่มีบันทึกในเดือนนี้</div>';
   wrap.innerHTML=html;
 }
-
-
 function showPastorChart(type,btn){
   currentPastorChart=type;
   document.querySelectorAll('#pastor-page .stab').forEach(b=>b.classList.remove('active'));
@@ -2504,12 +2259,9 @@ function setPastorChartMode(mode,btn){
   getLogs().then(logs=>renderPastorChart(currentPastorChart,logs));
 }
 function renderPastorChart(type,allLogs){
-  // reuse admin chart logic
   const savedMode=chartMode;
   chartMode=pastorChartMode;
-  const el=document.getElementById('admin-chart');
   const pel=document.getElementById('pastor-chart');
-  // temporarily redirect
   if(pel){
     pel.id='admin-chart';
     renderAdminChart(type,allLogs);
@@ -2545,10 +2297,7 @@ function renderPastorLambManage(){
   var el=document.getElementById('pastor-lamb-list');
   if(!el)return;
   var pastorLambs=LAMBS.filter(function(l){return l.mentor==='ธีระ';});
-  if(pastorLambs.length===0){
-    el.innerHTML='<div style="color:var(--text3);font-size:13px">ยังไม่มีลูกแกะ</div>';
-    return;
-  }
+  if(pastorLambs.length===0){el.innerHTML='<div style="color:var(--text3);font-size:13px">ยังไม่มีลูกแกะ</div>';return;}
   var html='';
   pastorLambs.forEach(function(l){
     var safeId=String(l.id).replace(/'/g,'');
@@ -2560,10 +2309,8 @@ function renderPastorLambManage(){
 async function pastorAddLamb(){
   const name=document.getElementById('p-new-lamb-name').value.trim();
   if(!name){showToast('กรุณากรอกชื่อ');return;}
-  const mentor='ธีระ';
-  const group='Pastor';
   const newId='LP'+Date.now();
-  const newLamb={id:newId,name:name,mentor:mentor,group:group};
+  const newLamb={id:newId,name:name,mentor:'ธีระ',group:'Pastor'};
   try{
     await db.collection('lambs').doc(newId).set(newLamb);
     LAMBS.push(newLamb);
@@ -2572,9 +2319,7 @@ async function pastorAddLamb(){
     renderLambGrid();
     fillLambSelect();
     showToast('✓ เพิ่ม '+name+' แล้ว');
-  }catch(e){
-    showToast('เพิ่มไม่ได้: '+e.message);
-  }
+  }catch(e){ showToast('เพิ่มไม่ได้: '+e.message); }
 }
 async function pastorDeleteLamb(id,name){
   if(!confirm(`ลบลูกแกะ "${name}" ออกจากระบบ?`))return;
@@ -2584,9 +2329,13 @@ async function pastorDeleteLamb(id,name){
   showToast(`✓ ลบ ${name} แล้ว`);
 }
 
+// ══════════════════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════════════════
 function calcAge(bday){
   if(!bday) return '';
   const b=new Date(bday+'T00:00:00');
+  if(isNaN(b.getTime())) return '';
   const now=new Date();
   let age=now.getFullYear()-b.getFullYear();
   const m=now.getMonth()-b.getMonth();
@@ -2597,17 +2346,13 @@ function formatDate(d){
   if(!d)return'—';
   try{return new Date(d+'T00:00:00').toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'});}catch(e){return d;}
 }
-
 </script>
-
-<!-- Firebase SDK โหลดท้าย body — ต้องอยู่ก่อน initFirebase -->
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
-// ── BOOT — Firebase SDK โหลดเสร็จแล้ว ณ จุดนี้
 (function(){
   const savedMentor = sessionStorage.getItem('ln_mentor');
   if(savedMentor){
@@ -2615,7 +2360,6 @@ function formatDate(d){
     document.getElementById('app').style.display = 'flex';
   }
 })();
-// เรียก initFirebase ได้เลย SDK พร้อมแล้ว
 initFirebase();
 </script>
 
