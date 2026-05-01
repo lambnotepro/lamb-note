@@ -919,6 +919,21 @@ async function initFirebase(){
   try{
     firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
+
+    // ── sync LAMBS จาก Firestore (overwrite hardcode) ──
+    try{
+      const snap=await db.collection('lambs').get();
+      if(!snap.empty){
+        // มีข้อมูลใน Firestore → ใช้จาก Firestore เป็น source of truth
+        LAMBS=snap.docs.map(d=>d.data()).sort((a,b)=>a.name.localeCompare(b.name,'th'));
+      } else {
+        // ไม่มีใน Firestore → seed จาก hardcode
+        const batch=db.batch();
+        LAMBS.forEach(l=>batch.set(db.collection('lambs').doc(l.id),l));
+        await batch.commit();
+      }
+    }catch(e){ console.error('sync lambs:',e); }
+
     // restore session ถ้ามี
     const savedMentor=sessionStorage.getItem('ln_mentor');
     if(savedMentor){
@@ -936,16 +951,17 @@ async function initFirebase(){
       const targetPage2=document.getElementById(savedPage2);
       if(targetPage2)targetPage2.classList.add('active');
       if(navBtn2)navBtn2.classList.add('active');
+      // re-render หลัง LAMBS sync แล้ว
       initApp();
       const savedLamb2=sessionStorage.getItem('ln_lamb')||'';
       if(savedPage2==='profile-page'){selectedLambId=savedLamb2||null;renderLambGrid();}
       if(savedPage2==='outreach-page')renderOutreach();
       if(savedPage2==='pastor-page')renderPastor();
       if(savedPage2==='admin-page')renderAdmin();
-    }
-    // db พร้อมแล้ว: ถ้า doLogin ทำงานเร็วกว่า initFirebase → render schedule
-    if(currentMentor && currentMentor!=='admin'){
-      setTimeout(()=>{ if(db) renderScheduleTable(); }, 100);
+    } else if(currentMentor){
+      // doLogin เร็วกว่า initFirebase → re-render ด้วย LAMBS ที่ sync แล้ว
+      initApp();
+      if(currentMentor!=='admin') renderScheduleTable();
     }
   }catch(e){
     console.error('initFirebase error:',e);
@@ -1690,26 +1706,37 @@ async function adminAddLamb(){
   const name=document.getElementById('new-lamb-name').value.trim();
   const mentor=document.getElementById('new-lamb-mentor').value;
   const group=MENTOR_GROUPS[mentor]||document.getElementById('new-lamb-group').value;
-  if(!name||!mentor)return;
-  const ids=LAMBS.map(l=>parseInt(l.id.replace('L',''))||0);
-  const nextNum=Math.max(...ids,0)+1;
-  const newId='L'+String(nextNum).padStart(3,'0');
-  const newLamb={id:newId,name,mentor,group};
-  await db.collection('lambs').doc(newId).set(newLamb);
-  LAMBS.push(newLamb);LAMBS.sort((a,b)=>a.id.localeCompare(b.id));
-  document.getElementById('new-lamb-name').value='';
-  renderAdminLambManage();fillLambSelect();refreshAdminLambSelect();
-  showToast(`✓ เพิ่ม ${name} แล้ว`);
+  if(!name||!mentor){showToast('กรุณากรอกชื่อและเลือกพี่เลี้ยง');return;}
+  const newId='L'+Date.now(); // unique timestamp ID
+  const newLamb={id:newId,name:name,mentor:mentor,group:group};
+  try{
+    await db.collection('lambs').doc(newId).set(newLamb);
+    LAMBS.push(newLamb);
+    LAMBS.sort((a,b)=>a.name.localeCompare(b.name,'th'));
+    document.getElementById('new-lamb-name').value='';
+    // re-render ทุกส่วนที่ใช้ LAMBS
+    renderAdminLambManage();
+    fillLambSelect();
+    refreshAdminLambSelect();
+    renderAdmin(); // refresh ตาราง mentor summary ด้วย
+    showToast('✓ เพิ่ม '+name+' ('+mentor+') แล้ว');
+  }catch(e){
+    showToast('❌ เพิ่มไม่ได้: '+e.message);
+  }
 }
 async function adminDeleteLamb(id,name){
-  if(!confirm(`ลบลูกแกะ "${name}" ออกจากระบบ?\n(บันทึกที่มีอยู่จะยังคงอยู่)`))return;
-  await db.collection('lambs').doc(id).delete();
-  LAMBS=LAMBS.filter(l=>l.id!==id);
-  renderAdminLambManage();
-  fillLambSelect();
-  refreshAdminLambSelect();
-  fillScheduleDropdowns([]);
-  showToast(`✓ ลบ ${name} แล้ว`);
+  if(!confirm('ลบลูกแกะ "'+name+'" ออกจากระบบ?\n(บันทึกที่มีอยู่จะยังคงอยู่)'))return;
+  try{
+    await db.collection('lambs').doc(id).delete();
+    LAMBS=LAMBS.filter(l=>l.id!==id);
+    renderAdminLambManage();
+    fillLambSelect();
+    refreshAdminLambSelect();
+    renderAdmin();
+    showToast('✓ ลบ '+name+' แล้ว');
+  }catch(e){
+    showToast('❌ ลบไม่ได้: '+e.message);
+  }
 }
 
 // ══════════════════════════════════════════════════════
