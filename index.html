@@ -598,7 +598,26 @@ tbody td{padding:8px 10px;vertical-align:top}
     </div>
     <div id="pastor-chart"></div>
   </div>
-  <!-- Mentor summary -->
+  <!-- Mentor Bar Chart รายเดือน -->
+  <div class="card">
+    <div class="card-title">🏆 เวลาพี่เลี้ยงรายเดือน</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+      <label style="font-size:13px;color:var(--text2)">เดือน:</label>
+      <select id="mentor-bar-month" onchange="renderMentorBarChart()" style="border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:13px">
+      </select>
+      <label style="font-size:13px;color:var(--text2)">แสดงเป็น:</label>
+      <select id="mentor-bar-unit" onchange="renderMentorBarChart()" style="border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:13px">
+        <option value="hrs">ชั่วโมง (ชม.)</option>
+        <option value="days">วัน (คิด 8ชม./วัน)</option>
+      </select>
+    </div>
+    <div id="mentor-bar-chart" style="padding:4px 0"></div>
+  </div>
+```
+
+<!-- Mentor summary -->
+
+```
   <div class="card">
     <div class="card-title">👥 สรุปรายพี่เลี้ยง</div>
     <div class="tbl-wrap">
@@ -638,10 +657,10 @@ tbody td{padding:8px 10px;vertical-align:top}
       <div class="form-row">
         <div class="form-group"><label>ชื่อลูกแกะ</label><input type="text" id="p-new-lamb-name" placeholder="ชื่อ"></div>
         <div class="form-group"><label>พี่เลี้ยง</label>
-          <select id="p-new-lamb-mentor" onchange="pastorAutoFillGroup()"></select>
+          <input type="text" id="p-new-lamb-mentor" value="ธีระ" readonly style="background:var(--surface2);color:var(--text2)">
         </div>
         <div class="form-group"><label>Care Group (auto)</label>
-          <input type="text" id="p-new-lamb-group" readonly style="background:var(--surface2);color:var(--text2)">
+          <input type="text" id="p-new-lamb-group" value="Pastor" readonly style="background:var(--surface2);color:var(--text2)">
         </div>
       </div>
       <button class="btn btn-primary btn-sm" onclick="pastorAddLamb()">+ เพิ่ม</button>
@@ -1648,7 +1667,10 @@ async function adminDeleteLamb(id,name){
   if(!confirm(`ลบลูกแกะ "${name}" ออกจากระบบ?\n(บันทึกที่มีอยู่จะยังคงอยู่)`))return;
   await db.collection('lambs').doc(id).delete();
   LAMBS=LAMBS.filter(l=>l.id!==id);
-  renderAdminLambManage();fillLambSelect();refreshAdminLambSelect();
+  renderAdminLambManage();
+  fillLambSelect();
+  refreshAdminLambSelect();
+  fillScheduleDropdowns([]);
   showToast(`✓ ลบ ${name} แล้ว`);
 }
 
@@ -2214,19 +2236,12 @@ async function renderPastor(){
   renderPastorOutreach();
   renderPastorLambManage();
   fillPastorMentorSelect();
+  // กราฟแท่งพี่เลี้ยงรายเดือน
+  initMentorBarMonthSelect();
+  renderMentorBarChart();
 }
-function fillPastorMentorSelect(){
-  const sel=document.getElementById('p-new-lamb-mentor');
-  if(sel){
-    sel.innerHTML=DEFAULT_MENTORS.map(m=>`<option value="${m}">${m}</option>`).join('');
-    pastorAutoFillGroup();
-  }
-}
-function pastorAutoFillGroup(){
-  const mentor=document.getElementById('p-new-lamb-mentor')?.value;
-  const grp=document.getElementById('p-new-lamb-group');
-  if(grp&&mentor)grp.value=MENTOR_GROUPS[mentor]||'';
-}
+function fillPastorMentorSelect(){ /* ไม่ต้องใช้แล้ว */ }
+function pastorAutoFillGroup(){ /* ไม่ต้องใช้แล้ว */ }
 function renderPastorMentors(allLogs){
   const now=new Date();
   const weekStart=new Date(now);weekStart.setDate(now.getDate()-now.getDay());
@@ -2238,6 +2253,92 @@ function renderPastorMentors(allLogs){
     return`<tr><td style="font-weight:700;color:var(--warm)">${m}</td><td>${MENTOR_GROUPS[m]||''}</td><td>${myLambs.map(l=>l.name).join(', ')||'—'}</td><td>${mLogs.length}</td><td>${hrs.toFixed(1)}</td><td>${wkHrs.toFixed(1)}</td></tr>`;
   }).join('');
 }
+function initMentorBarMonthSelect(){
+  const sel=document.getElementById('mentor-bar-month');
+  if(!sel)return;
+  const now=new Date();
+  const opts=[];
+  for(let i=0;i<12;i++){
+    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    const val=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const label=`${d.getFullYear()} ${['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][d.getMonth()]}`;
+    opts.push(`<option value="${val}"${i===0?' selected':''}>${label}</option>`);
+  }
+  sel.innerHTML=opts.join('');
+}
+
+async function renderMentorBarChart(){
+  const sel=document.getElementById('mentor-bar-month');
+  const unitSel=document.getElementById('mentor-bar-unit');
+  const wrap=document.getElementById('mentor-bar-chart');
+  if(!sel||!wrap)return;
+  const ym=sel.value;
+  const unit=unitSel?unitSel.value:'hrs';
+  const parts=ym.split('-');
+  const yr=parseInt(parts[0]);
+  const mo=parseInt(parts[1]);
+
+  let allLogs=[];
+  try{
+    if(db){
+      const snap=await db.collection('logs').get();
+      allLogs=snap.docs.map(d=>d.data());
+    }
+  }catch(e){console.error(e);}
+
+  const PASTOR_LOCAL=['ธีระ'];
+  const monthLogs=allLogs.filter(function(l){
+    if(PASTOR_LOCAL.includes(l.mentor))return false;
+    if(!l.date)return false;
+    const d=new Date(l.date+'T00:00:00');
+    return d.getFullYear()===yr && d.getMonth()+1===mo;
+  });
+
+  const mentors=DEFAULT_MENTORS.filter(function(m){return !PASTOR_LOCAL.includes(m);});
+  const data=mentors.map(function(m){
+    const hrs=monthLogs.filter(function(l){return l.mentor===m;})
+      .reduce(function(a,l){return a+(l.dur||0);},0);
+    return {name:m,hrs:hrs};
+  }).sort(function(a,b){return b.hrs-a.hrs;});
+
+  const maxVal=Math.max.apply(null,data.map(function(d){return unit==='days'?d.hrs/8:d.hrs;}).concat([0.1]));
+  const colors=['#c8860a','#8b7355','#6b9e6b','#5b8db8','#c87070','#7b6bc4','#c4926b','#5da8a8'];
+  const MONTH_TH=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const medals=['🥇','🥈','🥉'];
+
+  let html='<div style="font-size:12px;color:var(--text3);margin-bottom:8px">'
+    +MONTH_TH[mo-1]+' '+yr+' · '+(unit==='hrs'?'หน่วย: ชั่วโมง':'หน่วย: วัน (8ชม.=1วัน)')
+    +'</div>';
+
+  var allZero=data.every(function(d){return d.hrs===0;});
+
+  data.forEach(function(d,i){
+    var val=unit==='days'?d.hrs/8:d.hrs;
+    var pct=maxVal>0?(val/maxVal*100):0;
+    var label=val===0?'0':(unit==='days'?val.toFixed(2)+' วัน':d.hrs.toFixed(1)+' ชม.');
+    var medal=i<3?medals[i]:'';
+    var color=colors[i%colors.length];
+    var labelLeft=Math.min(pct,65);
+    var labelColor=pct>40?'white':'var(--text)';
+    html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'
+      +'<div style="width:62px;text-align:right;font-size:12px;font-weight:700;color:var(--warm);flex-shrink:0">'+medal+d.name+'</div>'
+      +'<div style="flex:1;background:#f0ece6;border-radius:6px;height:26px;position:relative;overflow:hidden">'
+      +'<div style="width:'+pct+'%;background:'+color+';height:100%;border-radius:6px;min-width:'+(val>0?4:0)+'px"></div>';
+    if(val>0){
+      html+='<span style="position:absolute;left:'+labelLeft+'%;top:50%;transform:translateY(-50%);font-size:11px;color:'+labelColor+';font-weight:700;white-space:nowrap;padding:0 4px">'+label+'</span>';
+    } else {
+      html+='<span style="font-size:11px;color:var(--text3);padding:4px 6px">0</span>';
+    }
+    html+='</div></div>';
+  });
+
+  if(allZero){
+    html+='<div style="text-align:center;color:var(--text3);font-size:13px;padding:16px">ยังไม่มีบันทึกในเดือนนี้</div>';
+  }
+  wrap.innerHTML=html;
+}
+
+
 function showPastorChart(type,btn){
   currentPastorChart=type;
   document.querySelectorAll('#pastor-page .stab').forEach(b=>b.classList.remove('active'));
@@ -2295,9 +2396,9 @@ function renderPastorLambManage(){
 }
 async function pastorAddLamb(){
   const name=document.getElementById('p-new-lamb-name').value.trim();
-  const mentor=document.getElementById('p-new-lamb-mentor').value;
-  const group=MENTOR_GROUPS[mentor]||'';
-  if(!name||!mentor)return;
+  const mentor='ธีระ'; // ล็อคพี่เลี้ยงเป็น ธีระ เสมอ
+  const group='Pastor';
+  if(!name)return;
   const ids=LAMBS.map(l=>parseInt(l.id.replace('L',''))||0);
   const nextNum=Math.max(...ids,0)+1;
   const newId='L'+String(nextNum).padStart(3,'0');
