@@ -493,6 +493,10 @@ tbody td{padding:8px 10px;vertical-align:top}
         <label>อาชีพ / สถานะ</label>
         <input type="text" id="or-job" placeholder="เช่น นักศึกษา, พนักงาน">
       </div>
+      <div class="form-group" style="max-width:150px">
+        <label>วันเกิด</label>
+        <input type="date" id="or-bday" placeholder="วันเกิด">
+      </div>
     </div>
     <div class="form-row">
       <div class="form-group">
@@ -1935,6 +1939,7 @@ async function saveOutreach(){
   if(!date){alert('กรุณาเลือกวันที่');return;}
   const btn=document.getElementById('or-save-btn');
   btn.disabled=true;btn.textContent='กำลังบันทึก...';
+  const bday=document.getElementById('or-bday').value||'';
   await db.collection('outreach').add({
     mentor:currentMentor,
     fname,nick,
@@ -1943,10 +1948,10 @@ async function saveOutreach(){
     status:document.getElementById('or-status').value,
     dur:parseFloat(document.getElementById('or-dur').value)||1,
     note:document.getElementById('or-note').value.trim(),
-    date,ts:Date.now()
+    date,bday,ts:Date.now()
   });
   // reset form
-  ['or-fname','or-nick','or-job','or-contact','or-note'].forEach(id=>document.getElementById(id).value='');
+  ['or-fname','or-nick','or-job','or-contact','or-note','or-bday'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('or-dur').value='1';
   btn.disabled=false;btn.textContent='+ บันทึก';
   showToast('✓ บันทึกคนใหม่แล้ว');
@@ -1977,7 +1982,9 @@ async function renderOutreach(){
     const personMap={};
     docs.forEach(d=>{
       const key=(d.nick||d.fname||'ไม่ระบุชื่อ');
-      if(!personMap[key]) personMap[key]={nick:d.nick,fname:d.fname,job:d.job,contact:d.contact,visits:[]};
+      if(!personMap[key]) personMap[key]={nick:d.nick,fname:d.fname,job:d.job,contact:d.contact,bday:d.bday||'',visits:[]};
+      // อัปเดต bday ถ้ามีข้อมูล
+      if(d.bday) personMap[key].bday=d.bday;
       // อัปเดตข้อมูลพื้นฐานถ้ามีใหม่กว่า
       if(d.job) personMap[key].job=d.job;
       if(d.contact) personMap[key].contact=d.contact;
@@ -2105,8 +2112,10 @@ function renderOrSummaryAll(){
     const sorted=[...p.visits].sort((a,b)=>(b.ts||0)-(a.ts||0));
     const st=sorted[0]?.status||'';
     const hrs=p.visits.reduce((a,v)=>a+(v.dur||0),0);
+    const ageTxt=calcAge(p.bday||sorted[0]?.bday||'');
     return`<tr style="cursor:pointer" onclick="selectOrPersonFromTable(${i})">
       <td><strong>${p.nick||p.fname||'?'}</strong>${p.fname&&p.nick?' ('+p.fname+')':''}</td>
+      <td style="text-align:center;color:var(--text2);font-size:13px">${ageTxt!==''?ageTxt+' ปี':'-'}</td>
       <td style="text-align:center">${p.visits.length}</td>
       <td style="text-align:center">${hrs.toFixed(1)}</td>
       <td><span class="badge ${statusColor[st]||'badge-warm'}">${st}</span></td>
@@ -2575,6 +2584,15 @@ async function pastorDeleteLamb(id,name){
   showToast(`✓ ลบ ${name} แล้ว`);
 }
 
+function calcAge(bday){
+  if(!bday) return '';
+  const b=new Date(bday+'T00:00:00');
+  const now=new Date();
+  let age=now.getFullYear()-b.getFullYear();
+  const m=now.getMonth()-b.getMonth();
+  if(m<0||(m===0&&now.getDate()<b.getDate())) age--;
+  return age>=0?age:'';
+}
 function formatDate(d){
   if(!d)return'—';
   try{return new Date(d+'T00:00:00').toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'});}catch(e){return d;}
